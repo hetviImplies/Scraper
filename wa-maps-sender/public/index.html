@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WA Bulk Sender — Maps Leads</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background: #0f1117;
+        color: #e2e8f0;
+        min-height: 100vh;
+      }
+
+      header {
+        background: linear-gradient(135deg, #1a1d2e, #16213e);
+        border-bottom: 1px solid #2d3748;
+        padding: 20px 32px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+      header .sub { font-size: 0.82rem; color: #64748b; margin-left: 4px; }
+
+      .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+      .card {
+        background: #1a1d2e;
+        border: 1px solid #2d3748;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+      .card > h2 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #6366f1;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .section-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #6366f1;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        margin: 20px 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .section-label::after { content: ""; flex: 1; height: 1px; background: #2d3748; }
+
+      label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 6px; font-weight: 500; }
+
+      input[type="text"], input[type="number"], textarea, select {
+        width: 100%;
+        padding: 10px 14px;
+        background: #0f1117;
+        border: 1px solid #2d3748;
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+      }
+      input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+      }
+      textarea { resize: vertical; min-height: 130px; font-family: inherit; line-height: 1.7; }
+
+      .hint { font-size: 0.75rem; color: #4b5563; margin-top: 6px; line-height: 1.6; }
+      .hint code { background: #0a0c14; padding: 1px 6px; border-radius: 4px; color: #a78bfa; font-size: 0.78rem; }
+
+      .form-grid { display: grid; gap: 16px; }
+      .g2 { grid-template-columns: 1fr 1fr; }
+      .g3 { grid-template-columns: 1fr 1fr 1fr; }
+      @media (max-width: 700px) { .g2, .g3 { grid-template-columns: 1fr; } }
+
+      /* ─── SMART FILTER BAR ─── */
+      .smart-filter {
+        background: #0f1117;
+        border: 1px solid #2d3748;
+        border-radius: 12px;
+        padding: 18px 20px;
+        margin-bottom: 18px;
+      }
+      .smart-filter .filter-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #6366f1;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-end;
+      }
+      .filter-group { display: flex; flex-direction: column; gap: 5px; }
+      .filter-group label { font-size: 0.7rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
+
+      /* Toggle chips */
+      .toggle-chip {
+        padding: 7px 14px;
+        border-radius: 99px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1.5px solid #2d3748;
+        background: #0f1117;
+        color: #64748b;
+        transition: all 0.15s;
+        white-space: nowrap;
+        user-select: none;
+      }
+      .toggle-chip:hover { border-color: #6366f1; color: #818cf8; }
+      .toggle-chip.active-green { border-color: #4ade80; color: #4ade80; background: rgba(74,222,128,0.08); }
+      .toggle-chip.active-orange { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.08); }
+      .toggle-chip.active-blue { border-color: #6366f1; color: #818cf8; background: rgba(99,102,241,0.1); }
+      .toggle-chip.active-red { border-color: #f87171; color: #f87171; background: rgba(248,113,113,0.08); }
+      .toggle-chip.active-purple { border-color: #a78bfa; color: #a78bfa; background: rgba(167,139,250,0.08); }
+
+      /* Category multi-select */
+      .cat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      .cat-chip {
+        padding: 5px 12px;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1.5px solid #2d3748;
+        background: #0f1117;
+        color: #64748b;
+        transition: all 0.15s;
+        user-select: none;
+      }
+      .cat-chip:hover { border-color: #6366f1; color: #818cf8; }
+      .cat-chip.active { border-color: #6366f1; color: #818cf8; background: rgba(99,102,241,0.12); }
+
+      .filter-search-box {
+        flex: 1;
+        min-width: 180px;
+      }
+      .filter-search-box input {
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        width: 100%;
+      }
+
+      .filter-stats {
+        font-size: 0.78rem;
+        color: #6366f1;
+        font-weight: 600;
+        padding: 7px 14px;
+        background: rgba(99,102,241,0.08);
+        border-radius: 99px;
+        border: 1px solid rgba(99,102,241,0.2);
+        white-space: nowrap;
+      }
+
+      /* Stats */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+      @media (max-width: 700px) { .stats { grid-template-columns: 1fr 1fr; } }
+      .stat { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 12px; padding: 16px; text-align: center; }
+      .stat .value { font-size: 1.8rem; font-weight: 700; color: #6366f1; }
+      .stat .label { font-size: 0.72rem; color: #64748b; margin-top: 4px; }
+
+      /* Table */
+      .table-wrap { overflow-x: auto; max-height: 380px; overflow-y: auto; border-radius: 8px; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+      th { background: #0a0c14; color: #6366f1; padding: 10px 12px; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; position: sticky; top: 0; z-index: 1; }
+      td { padding: 9px 12px; border-bottom: 1px solid #1e2235; color: #cbd5e1; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      tr:hover td { background: rgba(99,102,241,0.04); }
+
+      .badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px 8px; border-radius: 99px;
+        font-size: 0.68rem; font-weight: 600; white-space: nowrap;
+      }
+      .b-wait   { background: rgba(99,102,241,0.15); color: #818cf8; }
+      .b-sent   { background: rgba(74,222,128,0.1);  color: #4ade80; }
+      .b-active { background: rgba(245,158,11,0.15); color: #f59e0b; }
+      .b-error  { background: rgba(248,113,113,0.1); color: #f87171; }
+      .b-lead   { background: rgba(245,158,11,0.12); color: #f59e0b; }
+      .b-contacted { background: rgba(99,102,241,0.2); color: #818cf8; }
+      .b-replied   { background: rgba(34,211,238,0.15); color: #22d3ee; }
+      .b-deal      { background: rgba(74,222,128,0.15); color: #4ade80; }
+      .b-nophone   { background: rgba(100,116,139,0.1); color: #64748b; }
+
+      /* Buttons */
+      .btn-row { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+      .btn { padding: 11px 26px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+      .btn-green { background: linear-gradient(135deg, #25d366, #128c7e); color: #fff; }
+      .btn-green:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(37,211,102,0.35); }
+      .btn-indigo { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+      .btn-indigo:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(99,102,241,0.4); }
+      .btn-red { background: #ef4444; color: #fff; }
+      .btn-red:hover { background: #dc2626; }
+      .btn-ghost { background: #1e2235; color: #94a3b8; border: 1px solid #2d3748; }
+      .btn-ghost:hover { background: #252840; }
+      .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+      /* Mode toggle */
+      .mode-toggle { display: flex; gap: 10px; margin-bottom: 22px; }
+      .mode-btn { flex: 1; padding: 14px 16px; border: 2px solid #2d3748; border-radius: 10px; background: #0f1117; color: #64748b; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.5; }
+      .mode-btn.active { border-color: #6366f1; color: #818cf8; background: rgba(99,102,241,0.08); }
+      .mode-panel { display: none; }
+      .mode-panel.active { display: block; }
+
+      /* Manual Queue */
+      #manualQueue { max-height: 520px; overflow-y: auto; }
+      .qi { display: flex; align-items: center; gap: 12px; background: #0f1117; border: 1px solid #2d3748; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; transition: all 0.3s; }
+      .qi.contacted { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.04); }
+      .qi.replied   { border-color: rgba(34,211,238,0.4); background: rgba(34,211,238,0.04); }
+      .qi.deal      { border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.04); }
+      .qi .num { font-size: 0.72rem; color: #4b5563; min-width: 28px; }
+      .qi .info { flex: 1; min-width: 0; }
+      .qi .info .nm { font-weight: 600; font-size: 0.88rem; color: #e2e8f0; }
+      .qi .info .ph { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+      .qi .info .msg { font-size: 0.75rem; color: #a78bfa; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; }
+      .qi .actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+      .open-btn { padding: 8px 18px; background: #25d366; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.82rem; white-space: nowrap; transition: all 0.2s; }
+      .open-btn:hover:not(:disabled) { background: #128c7e; }
+      .open-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      /* Status action buttons in queue */
+      .status-actions { display: flex; gap: 5px; }
+      .sa-btn { padding: 5px 10px; border: 1.5px solid #2d3748; background: transparent; border-radius: 6px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+      .sa-btn:hover { background: rgba(255,255,255,0.04); }
+      .sa-btn.replied-btn  { color: #22d3ee; border-color: #22d3ee33; }
+      .sa-btn.replied-btn.on { background: rgba(34,211,238,0.1); border-color: #22d3ee; }
+      .sa-btn.deal-btn     { color: #4ade80; border-color: #4ade8033; }
+      .sa-btn.deal-btn.on  { background: rgba(74,222,128,0.1); border-color: #4ade80; }
+
+      /* ✅ NEW: Reset to New button */
+      .sa-btn.reset-btn { color: #f87171; border-color: #f8717133; }
+      .sa-btn.reset-btn:hover { background: rgba(248,113,113,0.1); border-color: #f87171; }
+
+      /* Progress */
+      .progress-wrap { margin: 0 0 24px; display: none; }
+      .progress-bar-bg { background: #2d3748; border-radius: 99px; height: 8px; overflow: hidden; }
+      .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #25d366, #128c7e); border-radius: 99px; transition: width 0.4s; width: 0%; }
+      .progress-label { font-size: 0.8rem; color: #64748b; margin-top: 6px; }
+
+      /* Log */
+      #logBox { background: #0a0c14; border: 1px solid #1e2235; border-radius: 10px; padding: 14px; height: 280px; overflow-y: auto; font-family: "Fira Code", monospace; font-size: 0.8rem; line-height: 1.7; }
+      #logBox p { margin: 0; }
+      .l-info    { color: #94a3b8; }
+      .l-success { color: #4ade80; }
+      .l-warn    { color: #fb923c; }
+      .l-error   { color: #f87171; }
+      .l-lead    { color: #f59e0b; font-weight: 600; }
+
+      /* Tag chips */
+      .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+      .chip { padding: 4px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; cursor: pointer; border: 1px solid #2d3748; background: #0f1117; color: #64748b; transition: all 0.15s; }
+      .chip:hover { border-color: #6366f1; color: #818cf8; }
+
+      .empty-state { text-align: center; padding: 40px; color: #4b5563; }
+      .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+      /* Preview box */
+      .preview-box { background: #0a0c14; border: 1px solid #2d3748; border-radius: 8px; padding: 14px; color: #c4b5fd; font-size: 0.9rem; white-space: pre-wrap; line-height: 1.7; margin-top: 12px; min-height: 60px; }
+
+      #stopBtn { display: none; }
+
+      /* ─── Status summary row ─── */
+      .status-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+      .ss-item { font-size: 0.75rem; font-weight: 600; padding: 4px 12px; border-radius: 99px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span>💬</span>
+      <h1>WhatsApp Bulk Sender <span class="sub">— Maps Leads Edition</span></h1>
+    </header>
+
+    <div class="container">
+
+      <!-- STEP 1: Contacts -->
+      <div class="card">
+        <h2>📂 Step 1 — Contacts <span id="loadStatus" style="color:#64748b;font-weight:400;font-size:0.8rem;text-transform:none;letter-spacing:0;margin-left:8px;">Loading leads.json…</span></h2>
+
+        <div id="contactsSection" style="margin-top:4px">
+          <div class="section-label">🎯 Smart Filters</div>
+
+          <div class="smart-filter">
+            <div class="filter-title">⚡ Filter Contacts</div>
+            <div class="filter-row" style="gap:16px;align-items:flex-start;">
+
+              <div class="filter-group">
+                <label>Lead Status</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <span class="toggle-chip" id="fAll" onclick="toggleLeadFilter('all')">📊 All</span>
+                  <span class="toggle-chip" id="fHot" onclick="toggleLeadFilter('hot')">🔥 Hot Leads</span>
+                  <span class="toggle-chip" id="fNot" onclick="toggleLeadFilter('not')">📋 Non-Leads</span>
+                </div>
+              </div>
+
+              <div class="filter-group">
+                <label>Has Contact</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <span class="toggle-chip" id="fcAll" onclick="toggleContactFilter('all')">📞 All</span>
+                  <span class="toggle-chip" id="fcHas" onclick="toggleContactFilter('has')">✅ Has Phone</span>
+                  <span class="toggle-chip" id="fcNo"  onclick="toggleContactFilter('no')">❌ No Phone</span>
+                </div>
+              </div>
+
+              <div class="filter-group">
+                <label>Message Status</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <span class="toggle-chip" id="fsAll"       onclick="toggleSentFilter('all')">📬 All</span>
+                  <span class="toggle-chip" id="fsNew"       onclick="toggleSentFilter('new')">🆕 Not Contacted</span>
+                  <span class="toggle-chip" id="fsContacted" onclick="toggleSentFilter('contacted')">📤 Contacted</span>
+                  <span class="toggle-chip" id="fsReplied"   onclick="toggleSentFilter('replied')">💬 Replied</span>
+                  <span class="toggle-chip" id="fsDeal"      onclick="toggleSentFilter('deal')">🤝 Deal Closed</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div style="margin-top:14px;">
+              <div class="filter-group">
+                <label>Category</label>
+                <div class="cat-chips" id="catChips"></div>
+              </div>
+            </div>
+
+            <div class="filter-row" style="margin-top:14px;">
+              <div class="filter-search-box">
+                <input type="text" id="filterSearch" placeholder="🔍 Search name, category, address…" oninput="applyFilters()" />
+              </div>
+              <span class="filter-stats" id="filterStats">0 contacts</span>
+              <button class="btn btn-ghost" style="padding:8px 18px;font-size:0.82rem;" onclick="clearFilters()">✕ Clear</button>
+            </div>
+          </div>
+
+          <div class="status-summary" id="statusSummary"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Name</th><th>Category</th><th>Phone</th>
+                  <th>Rating</th><th>Reviews</th><th>Website</th>
+                  <th>Social</th><th>Lead</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="contactBody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:10px;">
+            <p id="contactCount" style="font-size:0.78rem;color:#64748b;margin:0"></p>
+            <span id="saveIndicator" style="font-size:0.75rem;color:#4b5563;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Template -->
+      <div class="card">
+        <h2>✏️ Step 2 — Write Message Template</h2>
+        <label>Message Template</label>
+        <textarea id="msgTemplate" placeholder="Hi {{name}}! 👋&#10;&#10;We noticed your {{category}} on Google Maps…"></textarea>
+        <div class="hint" style="margin-top:8px">Available variables from your JSON:</div>
+        <div class="chip-row" id="varChips"></div>
+        <div id="previewSection" style="display:none">
+          <div class="section-label">👁️ Message Preview (first contact)</div>
+          <div class="preview-box" id="previewBox"></div>
+        </div>
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn btn-ghost" onclick="loadDefaultTemplate()">💡 Load Default Template</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Send -->
+      <div class="card">
+        <h2>🚀 Step 3 — Send Messages</h2>
+        <div class="mode-toggle">
+          <div class="mode-btn active" id="modeManualBtn" onclick="setMode('manual')">
+            👆 Manual Mode<br />
+            <small style="font-weight:400;font-size:0.76rem">Opens WhatsApp one by one — you click Send each time</small>
+          </div>
+          <div class="mode-btn" id="modeAutoBtn" onclick="setMode('auto')">
+            🤖 Auto Mode (Puppeteer)<br />
+            <small style="font-weight:400;font-size:0.76rem">Bot opens WhatsApp Web, sends with random delays automatically</small>
+          </div>
+        </div>
+
+        <!-- Manual Panel -->
+        <div class="mode-panel active" id="manualPanel">
+          <div class="form-grid g3" style="margin-bottom:16px">
+            <div>
+              <label>Send To</label>
+              <select id="sendFilter">
+                <option value="all">All contacts with phone</option>
+                <option value="leads">🔥 Hot Leads only</option>
+                <option value="wa">Has WhatsApp link</option>
+                <option value="new">🆕 Not Contacted yet</option>
+              </select>
+            </div>
+            <div>
+              <label>Country Code (if missing)</label>
+              <input type="text" id="countryCode" value="91" placeholder="91" />
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn btn-green" id="genQueueBtn" onclick="generateQueue()" disabled style="width:100%">
+                💬 Generate Queue
+              </button>
+            </div>
+          </div>
+          <div id="manualQueue">
+            <div class="empty-state">
+              <div class="icon">📋</div>
+              <p>Upload JSON and click "Generate Queue"</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto Panel -->
+        <div class="mode-panel" id="autoPanel">
+          <div class="form-grid g3" style="margin-bottom:16px">
+            <div>
+              <label>Send To</label>
+              <select id="autoSendFilter">
+                <option value="all">All contacts with phone</option>
+                <option value="leads">🔥 Hot Leads only</option>
+                <option value="new">🆕 Not Contacted yet</option>
+              </select>
+            </div>
+            <div>
+              <label>Min Delay (sec)</label>
+              <input type="number" id="minDelay" value="8" min="3" max="60" />
+            </div>
+            <div>
+              <label>Max Delay (sec)</label>
+              <input type="number" id="maxDelay" value="20" min="5" max="120" />
+            </div>
+          </div>
+          <div class="hint" style="margin-bottom:16px">
+            ⚠️ You will need to <strong style="color:#f59e0b">scan the WhatsApp QR code</strong> once when the browser opens.
+          </div>
+          <div class="btn-row" style="margin-top:0">
+            <button class="btn btn-indigo" id="startAutoBtn" onclick="startAuto()" disabled>🤖 Start Auto Send</button>
+            <button class="btn btn-red" id="stopBtn" onclick="stopAuto()">🛑 Stop</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat"><div class="value" id="stTotal">0</div><div class="label">📊 Total</div></div>
+        <div class="stat"><div class="value" id="stLeads" style="color:#f59e0b">0</div><div class="label">🔥 Hot Leads</div></div>
+        <div class="stat"><div class="value" id="stSent" style="color:#4ade80">0</div><div class="label">✅ Sent</div></div>
+        <div class="stat"><div class="value" id="stPending" style="color:#818cf8">0</div><div class="label">⏳ Pending</div></div>
+        <div class="stat"><div class="value" id="stError" style="color:#f87171">0</div><div class="label">❌ Error</div></div>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div class="progress-label" id="progressLabel">0 / 0</div>
+      </div>
+
+      <!-- Log -->
+      <div class="card">
+        <h2>📜 Live Log</h2>
+        <div id="logBox"><p class="l-info">Waiting to start…</p></div>
+      </div>
+    </div>
+
+    <script>
+      let socket = { id: 'local-' + Math.random().toString(36).slice(2), on: () => {} };
+      try { socket = io(); } catch(e) {}
+
+      let allContacts = [];
+      let filteredContacts = [];
+      let queueContacts = [];
+      let sentCount = 0;
+      let errorCount = 0;
+      let currentMode = 'manual';
+
+      // ✅ Default filters: Hot Leads + Has Phone + Not Contacted
+      let fLead    = 'hot';
+      let fContact = 'has';
+      let fSent    = 'new';
+      let fCats    = new Set();
+
+      /* ═══ LEADS API ═══ */
+      function setContactStatus(placeId, updates) {
+        const c = allContacts.find(a => a.placeId === placeId);
+        if (c) Object.assign(c, updates);
+      }
+
+      let saveTimer = null;
+      function saveLeads(label = '') {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(async () => {
+          const indicator = document.getElementById('saveIndicator');
+          if (indicator) indicator.textContent = '💾 Saving…';
+          try {
+            const res = await fetch('/api/leads', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(allContacts),
+            });
+            const j = await res.json();
+            if (j.error) throw new Error(j.error);
+            if (indicator) indicator.textContent = `✅ Saved to leads.json`;
+            setTimeout(() => { if (indicator) indicator.textContent = ''; }, 2500);
+            if (label) log(`💾 ${label} — saved to leads.json`, 'success');
+          } catch(err) {
+            if (indicator) indicator.textContent = '❌ Save failed';
+            log('❌ Could not save leads.json: ' + err.message, 'error');
+          }
+        }, 600);
+      }
+
+      async function loadLeads() {
+        const statusEl = document.getElementById('loadStatus');
+        try {
+          const res = await fetch('/api/leads');
+          if (!res.ok) { const j = await res.json(); throw new Error(j.error || res.statusText); }
+          let data = await res.json();
+          if (!Array.isArray(data)) data = [data];
+          if (!data.length) throw new Error('leads.json is empty');
+          allContacts = data;
+          filteredContacts = [...allContacts];
+          buildCatChips();
+          applyFilters();
+          buildVarChips(data[0]);
+          updateGlobalStats(data);
+          enableButtons();
+          updatePreview();
+          renderStatusSummary();
+          if (statusEl) statusEl.textContent = `— ${data.length} contacts, ${data.filter(c=>c.isLead).length} hot leads`;
+          log(`📂 Loaded ${data.length} contacts — ${data.filter(c=>c.isLead).length} hot leads`, 'success');
+        } catch(err) {
+          if (statusEl) statusEl.textContent = '❌ ' + err.message;
+          log('❌ Failed to load leads.json: ' + err.message, 'error');
+        }
+      }
+
+      /* ═══ PHONE CLEANER ═══ */
+      function cleanPhone(raw, countryCode = '91') {
+        if (!raw) return null;
+        let p = String(raw).replace(/\D/g, '');
+        p = p.replace(/^0+/, '');
+        if (p.length === 10) p = countryCode + p;
+        if (p.length >= 10 && p.length <= 15) return p;
+        return null;
+      }
+
+      /* ═══ FILTER LOGIC ═══ */
+      function toggleLeadFilter(v) {
+        fLead = v;
+        ['fAll','fHot','fNot'].forEach(id => document.getElementById(id).className = 'toggle-chip');
+        const map = { all:'fAll', hot:'fHot', not:'fNot' };
+        const cls = { all:'active-blue', hot:'active-orange', not:'active-blue' };
+        document.getElementById(map[v]).className = 'toggle-chip ' + cls[v];
+        applyFilters();
+      }
+      function toggleContactFilter(v) {
+        fContact = v;
+        ['fcAll','fcHas','fcNo'].forEach(id => document.getElementById(id).className = 'toggle-chip');
+        const map = { all:'fcAll', has:'fcHas', no:'fcNo' };
+        document.getElementById(map[v]).className = 'toggle-chip active-green';
+        applyFilters();
+      }
+      function toggleSentFilter(v) {
+        fSent = v;
+        ['fsAll','fsNew','fsContacted','fsReplied','fsDeal'].forEach(id => document.getElementById(id).className = 'toggle-chip');
+        const map = { all:'fsAll', new:'fsNew', contacted:'fsContacted', replied:'fsReplied', deal:'fsDeal' };
+        const cls = { all:'active-blue', new:'active-blue', contacted:'active-purple', replied:'active-blue', deal:'active-green' };
+        document.getElementById(map[v]).className = 'toggle-chip ' + cls[v];
+        applyFilters();
+      }
+      function toggleCat(cat) {
+        if (fCats.has(cat)) fCats.delete(cat); else fCats.add(cat);
+        document.querySelectorAll('.cat-chip').forEach(el => {
+          el.classList.toggle('active', fCats.has(el.dataset.cat));
+        });
+        applyFilters();
+      }
+      function clearFilters() {
+        fLead = 'all'; fContact = 'all'; fSent = 'all'; fCats.clear();
+        document.getElementById('filterSearch').value = '';
+        document.querySelectorAll('.toggle-chip').forEach(el => el.className = 'toggle-chip');
+        document.getElementById('fAll').className  = 'toggle-chip active-blue';
+        document.getElementById('fcAll').className = 'toggle-chip active-green';
+        document.getElementById('fsAll').className = 'toggle-chip active-blue';
+        document.querySelectorAll('.cat-chip').forEach(el => el.classList.remove('active'));
+        applyFilters();
+      }
+
+      function applyFilters() {
+        const search = document.getElementById('filterSearch')?.value.toLowerCase() || '';
+        const cc = document.getElementById('countryCode')?.value.trim() || '91';
+        filteredContacts = allContacts.filter(c => {
+          if (fLead === 'hot' && !c.isLead) return false;
+          if (fLead === 'not' &&  c.isLead) return false;
+          const phone = cleanPhone(c.phone, cc);
+          if (fContact === 'has' && !phone) return false;
+          if (fContact === 'no'  &&  phone) return false;
+          if (fSent === 'new'       && (c.messageSent || c.replied || c.dealClosed)) return false;
+          if (fSent === 'contacted' && !c.messageSent) return false;
+          if (fSent === 'replied'   && !c.replied) return false;
+          if (fSent === 'deal'      && !c.dealClosed) return false;
+          if (fCats.size > 0 && !fCats.has(c.category)) return false;
+          if (search && !(
+            (c.name||'').toLowerCase().includes(search) ||
+            (c.category||'').toLowerCase().includes(search) ||
+            (c.address||'').toLowerCase().includes(search)
+          )) return false;
+          return true;
+        });
+        renderTable(filteredContacts);
+        document.getElementById('filterStats').textContent = `${filteredContacts.length} contacts`;
+      }
+
+      /* ═══ CATEGORY CHIPS ═══ */
+      function buildCatChips() {
+        const cats = [...new Set(allContacts.map(c => c.category).filter(Boolean))].sort();
+        const wrap = document.getElementById('catChips');
+        wrap.innerHTML = cats.map(cat =>
+          `<span class="cat-chip" data-cat="${cat}" onclick="toggleCat('${cat.replace(/'/g,"\\'")}')">
+            ${cat} <span style="color:#4b5563;font-size:0.65rem">${allContacts.filter(c=>c.category===cat).length}</span>
+          </span>`
+        ).join('');
+      }
+
+      /* ═══ STATUS BADGE ═══ */
+      function statusBadge(c) {
+        if (c.dealClosed)  return '<span class="badge b-deal">🤝 Deal</span>';
+        if (c.replied)     return '<span class="badge b-replied">💬 Replied</span>';
+        if (c.messageSent) return '<span class="badge b-contacted">📤 Contacted</span>';
+        return '<span class="badge b-wait">⏳ New</span>';
+      }
+
+      /* ═══ RENDER TABLE ═══ */
+      function renderTable(data) {
+        const body = document.getElementById('contactBody');
+        body.innerHTML = data.slice(0,100).map((c,i) => {
+          const phone = cleanPhone(c.phone);
+          const socialWA = c.social?.find(s => s.platform === 'whatsapp');
+          const socialIG = c.social?.find(s => s.platform === 'instagram');
+          const socialFB = c.social?.find(s => s.platform === 'facebook');
+          const socialStr = [
+            socialWA ? `<a href="${socialWA.url}" target="_blank" style="color:#25d366">WA</a>` : '',
+            socialIG ? `<a href="${socialIG.url}" target="_blank" style="color:#e1306c">IG</a>` : '',
+            socialFB ? `<a href="${socialFB.url}" target="_blank" style="color:#1877f2">FB</a>` : '',
+          ].filter(Boolean).join(' ');
+          return `<tr>
+            <td>${i+1}</td>
+            <td title="${c.name||''}">${c.name||'—'}</td>
+            <td>${c.category||'—'}</td>
+            <td>${phone ? '+'+phone : '<span style="color:#4b5563">No phone</span>'}</td>
+            <td>⭐ ${c.rating||'—'}</td>
+            <td>${c.reviewCount||'—'}</td>
+            <td>${c.website && c.website!=='Not Found' ? `<a href="${c.website}" target="_blank" style="color:#818cf8">🔗</a>` : '—'}</td>
+            <td>${socialStr||'—'}</td>
+            <td>${c.isLead ? '<span class="badge b-lead">🔥 Lead</span>' : '—'}</td>
+            <td>${statusBadge(c)}</td>
+          </tr>`;
+        }).join('');
+        document.getElementById('contactCount').textContent = `Showing ${Math.min(data.length,100)} of ${data.length} contacts`;
+        document.getElementById('contactsSection').style.display = 'block';
+      }
+
+      /* ═══ STATUS SUMMARY ═══ */
+      function renderStatusSummary() {
+        const total     = allContacts.length;
+        const contacted = allContacts.filter(c => c.messageSent).length;
+        const replied   = allContacts.filter(c => c.replied).length;
+        const deals     = allContacts.filter(c => c.dealClosed).length;
+        const newOnes   = total - contacted;
+        document.getElementById('statusSummary').innerHTML = `
+          <span class="ss-item" style="background:rgba(99,102,241,0.12);color:#818cf8">📊 Total: ${total}</span>
+          <span class="ss-item" style="background:rgba(74,222,128,0.08);color:#4ade80">🆕 Not contacted: ${newOnes}</span>
+          <span class="ss-item" style="background:rgba(99,102,241,0.2);color:#a78bfa">📤 Contacted: ${contacted}</span>
+          <span class="ss-item" style="background:rgba(34,211,238,0.12);color:#22d3ee">💬 Replied: ${replied}</span>
+          <span class="ss-item" style="background:rgba(74,222,128,0.15);color:#4ade80">🤝 Deals: ${deals}</span>
+        `;
+      }
+
+      /* ═══ VAR CHIPS ═══ */
+      function buildVarChips(sample) {
+        const keys = ['name','category','rating','reviewCount','phone','address','website'];
+        document.getElementById('varChips').innerHTML = keys.map(k =>
+          `<span class="chip" onclick="insertVar('{{${k}}}')">{{${k}}}</span>`
+        ).join('');
+      }
+      function insertVar(v) {
+        const ta = document.getElementById('msgTemplate');
+        const pos = ta.selectionStart;
+        ta.value = ta.value.slice(0,pos) + v + ta.value.slice(ta.selectionEnd);
+        ta.focus();
+        ta.setSelectionRange(pos+v.length, pos+v.length);
+        updatePreview();
+      }
+
+      /* ═══ TEMPLATE & PREVIEW ═══ */
+      document.getElementById('msgTemplate').addEventListener('input', updatePreview);
+      function buildMessage(tpl, contact) {
+        return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => {
+          const val = contact[k];
+          if (val === null || val === undefined || val === '') return `[${k}]`;
+          return String(val).trim();
+        });
+      }
+      function updatePreview() {
+        const tpl = document.getElementById('msgTemplate').value.trim();
+        if (!tpl || !allContacts.length) { document.getElementById('previewSection').style.display='none'; return; }
+        const cc = document.getElementById('countryCode')?.value.trim()||'91';
+        const sample = allContacts.find(c => cleanPhone(c.phone,cc)) || allContacts[0];
+        document.getElementById('previewBox').textContent = buildMessage(tpl, sample);
+        document.getElementById('previewSection').style.display = 'block';
+      }
+      function loadDefaultTemplate() {
+        document.getElementById('msgTemplate').value = `Hi {{name}}! 👋\n\nWe noticed your {{category}} on Google Maps (⭐{{rating}} rating, {{reviewCount}} reviews). Amazing work!\n\nWe help local businesses like yours grow their online presence and get more customers through social media & digital marketing.\n\nWould you be open to a quick chat? 😊\n\n– Team Growth`;
+        updatePreview();
+      }
+
+      /* ═══ MODE TOGGLE ═══ */
+      function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('modeManualBtn').classList.toggle('active', mode==='manual');
+        document.getElementById('modeAutoBtn').classList.toggle('active', mode==='auto');
+        document.getElementById('manualPanel').classList.toggle('active', mode==='manual');
+        document.getElementById('autoPanel').classList.toggle('active', mode==='auto');
+      }
+      function enableButtons() {
+        document.getElementById('genQueueBtn').disabled  = false;
+        document.getElementById('startAutoBtn').disabled = false;
+      }
+
+      /* ═══ GLOBAL STATS ═══ */
+      function updateGlobalStats(data) {
+        document.getElementById('stTotal').textContent   = data.length;
+        document.getElementById('stLeads').textContent   = data.filter(c => c.isLead).length;
+        document.getElementById('stSent').textContent    = sentCount;
+        document.getElementById('stPending').textContent = Math.max(0, queueContacts.length - sentCount - errorCount);
+        document.getElementById('stError').textContent   = errorCount;
+      }
+      function updateProgress() {
+        const total = queueContacts.length;
+        if (!total) return;
+        const done = sentCount + errorCount;
+        const pct = Math.round(done/total*100);
+        document.getElementById('progressFill').style.width = pct+'%';
+        document.getElementById('progressLabel').textContent = `${done} / ${total} processed`;
+        document.getElementById('stSent').textContent    = sentCount;
+        document.getElementById('stError').textContent   = errorCount;
+        document.getElementById('stPending').textContent = Math.max(0, total-done);
+      }
+
+      /* ═══ GENERATE QUEUE ═══ */
+      function generateQueue() {
+        const tpl         = document.getElementById('msgTemplate').value.trim();
+        const filter      = document.getElementById('sendFilter').value;
+        const countryCode = document.getElementById('countryCode').value.trim() || '91';
+        if (!tpl) return alert('Please write a message template first!');
+
+        let source = filteredContacts.length > 0 ? filteredContacts : allContacts;
+        queueContacts = source.filter(c => {
+          const phone  = cleanPhone(c.phone, countryCode);
+          const waLink = c.social?.find(s => s.platform==='whatsapp')?.url;
+          if (!phone && !waLink) return false;
+          if (filter === 'leads' && !c.isLead) return false;
+          if (filter === 'wa'    && !waLink)   return false;
+          if (filter === 'new'   && c.messageSent) return false;
+          return true;
+        });
+        if (!queueContacts.length) return alert('No contacts match the filter!');
+
+        sentCount = 0; errorCount = 0;
+        document.getElementById('progressWrap').style.display = 'block';
+        document.getElementById('stPending').textContent = queueContacts.length;
+
+        const queue = document.getElementById('manualQueue');
+        queue.innerHTML = queueContacts.map((c,i) => {
+          const phone  = cleanPhone(c.phone, countryCode);
+          const waLink = c.social?.find(s => s.platform==='whatsapp')?.url;
+          const msg    = buildMessage(tpl, c);
+          let finalLink;
+          if (phone) {
+            finalLink = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+          } else if (waLink) {
+            const match = waLink.match(/wa\.me\/(\d+)/);
+            finalLink = match ? `https://wa.me/${match[1]}?text=${encodeURIComponent(msg)}` : waLink;
+          }
+
+          let qiClass = 'qi';
+          if (c.dealClosed)       qiClass += ' deal';
+          else if (c.replied)     qiClass += ' replied';
+          else if (c.messageSent) qiClass += ' contacted';
+
+          const repliedOn    = c.replied    ? 'on' : '';
+          const dealOn       = c.dealClosed ? 'on' : '';
+          const openDisabled = c.messageSent ? 'disabled' : '';
+          const openLabel    = c.messageSent ? '✅ Sent' : 'Open WhatsApp →';
+
+          return `<div class="${qiClass}" id="qi_${i}">
+            <span class="num">${i+1}</span>
+            <div class="info">
+              <div class="nm">${c.name||'Unknown'} ${c.isLead ? '🔥' : ''}</div>
+              <div class="ph">${phone ? '+'+phone : '(from social link)'} · ⭐${c.rating||'?'} · ${c.category||''}</div>
+              <div class="msg">${msg.replace(/\n/g,' ')}</div>
+            </div>
+            <div class="actions">
+              <div class="status-actions">
+                <button class="sa-btn replied-btn ${repliedOn}" id="rbtn_${i}" onclick="markReplied(${i})" title="Toggle Replied">
+                  💬 Replied
+                </button>
+                <button class="sa-btn deal-btn ${dealOn}" id="dbtn_${i}" onclick="markDeal(${i})" title="Toggle Deal Closed">
+                  🤝 Deal
+                </button>
+                <!-- ✅ NEW: Reset to New button -->
+                <button class="sa-btn reset-btn" id="resetbtn_${i}" onclick="resetToNew(${i})" title="Reset to New (undo sent/replied/deal)">
+                  🔄 Reset
+                </button>
+              </div>
+              <span class="badge ${c.messageSent ? 'b-contacted' : 'b-wait'}" id="qbadge_${i}" style="margin:0 4px;">
+                ${c.messageSent ? '📤' : '⏳'}
+              </span>
+              <button class="open-btn" id="qbtn_${i}" ${openDisabled}
+                onclick="openWA(${i}, '${finalLink?.replace(/'/g,"\\'")}')">
+                ${openLabel}
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+
+        log(`✅ Queue ready — ${queueContacts.length} contacts (filter: ${filter})`, 'success');
+      }
+
+      /* ═══ STATUS UPDATE HELPER ═══ */
+      function applyStatusUpdate(placeId, updates) {
+        if (placeId) setContactStatus(placeId, updates);
+        applyFilters();
+        renderStatusSummary();
+        saveLeads();
+      }
+
+      /* ═══ OPEN WHATSAPP ═══ */
+      function openWA(index, link) {
+        if (!link) return;
+        window.open(link, '_blank');
+        const c = queueContacts[index];
+        c.messageSent = true;
+        c.status = 'contacted';
+        applyStatusUpdate(c.placeId, { messageSent: true, status: 'contacted' });
+        const qi = document.getElementById(`qi_${index}`);
+        if (qi) { qi.classList.remove('replied','deal'); qi.classList.add('contacted'); }
+        const badge = document.getElementById(`qbadge_${index}`);
+        if (badge) { badge.className = 'badge b-contacted'; badge.textContent = '📤'; }
+        const btn = document.getElementById(`qbtn_${index}`);
+        if (btn) { btn.disabled = true; btn.textContent = '✅ Sent'; }
+        sentCount++;
+        updateProgress();
+        log(`✅ Opened → ${c.name||c.phone}`, 'success');
+      }
+
+      /* ═══ MARK REPLIED ═══ */
+      function markReplied(index) {
+        const c = queueContacts[index];
+        c.replied = !c.replied;
+        applyStatusUpdate(c.placeId, { replied: c.replied });
+        const btn = document.getElementById(`rbtn_${index}`);
+        if (btn) btn.classList.toggle('on', c.replied);
+        const qi = document.getElementById(`qi_${index}`);
+        if (qi) qi.className = 'qi' + (c.dealClosed ? ' deal' : c.replied ? ' replied' : c.messageSent ? ' contacted' : '');
+        log(`💬 ${c.name} — replied marked ${c.replied ? 'ON' : 'OFF'}`, 'info');
+      }
+
+      /* ═══ MARK DEAL ═══ */
+      function markDeal(index) {
+        const c = queueContacts[index];
+        c.dealClosed = !c.dealClosed;
+        applyStatusUpdate(c.placeId, { dealClosed: c.dealClosed });
+        const btn = document.getElementById(`dbtn_${index}`);
+        if (btn) btn.classList.toggle('on', c.dealClosed);
+        const qi = document.getElementById(`qi_${index}`);
+        if (qi) qi.className = 'qi' + (c.dealClosed ? ' deal' : c.replied ? ' replied' : c.messageSent ? ' contacted' : '');
+        log(`🤝 ${c.name} — deal ${c.dealClosed ? 'CLOSED 🎉' : 'reopened'}`, c.dealClosed ? 'success' : 'warn');
+      }
+
+      /* ═══════════════════════════════════════
+         ✅ NEW: RESET TO NEW
+         Clears messageSent, replied, dealClosed
+         — reverts contact back to fresh/new state
+      ═══════════════════════════════════════ */
+      function resetToNew(index) {
+        const c = queueContacts[index];
+        // Clear all status flags
+        c.messageSent = false;
+        c.replied     = false;
+        c.dealClosed  = false;
+        c.status      = 'new';
+
+        // Save back to leads.json
+        applyStatusUpdate(c.placeId, {
+          messageSent: false,
+          replied:     false,
+          dealClosed:  false,
+          status:      'new',
+        });
+
+        // Update queue item UI
+        const qi = document.getElementById(`qi_${index}`);
+        if (qi) qi.className = 'qi'; // remove contacted/replied/deal classes
+
+        const badge = document.getElementById(`qbadge_${index}`);
+        if (badge) { badge.className = 'badge b-wait'; badge.textContent = '⏳'; }
+
+        const openBtn = document.getElementById(`qbtn_${index}`);
+        if (openBtn) { openBtn.disabled = false; openBtn.textContent = 'Open WhatsApp →'; }
+
+        const rbtn = document.getElementById(`rbtn_${index}`);
+        if (rbtn) rbtn.classList.remove('on');
+
+        const dbtn = document.getElementById(`dbtn_${index}`);
+        if (dbtn) dbtn.classList.remove('on');
+
+        log(`🔄 ${c.name||'Contact'} — reset to New`, 'warn');
+      }
+
+      /* ═══ AUTO MODE ═══ */
+      function startAuto() {
+        const tpl         = document.getElementById('msgTemplate').value.trim();
+        const filter      = document.getElementById('autoSendFilter').value;
+        const minDelay    = parseInt(document.getElementById('minDelay').value) || 8;
+        const maxDelay    = parseInt(document.getElementById('maxDelay').value) || 20;
+        const countryCode = document.getElementById('countryCode')?.value.trim() || '91';
+        if (!tpl) return alert('Please write a message template first!');
+
+        queueContacts = allContacts.filter(c => {
+          const phone = cleanPhone(c.phone, countryCode);
+          if (!phone) return false;
+          if (filter === 'leads' && !c.isLead) return false;
+          if (filter === 'new'   && c.messageSent) return false;
+          return true;
+        });
+        if (!queueContacts.length) return alert('No contacts with valid phone numbers!');
+
+        const payload = queueContacts.map(c => ({
+          phone:   cleanPhone(c.phone, countryCode),
+          name:    c.name || 'there',
+          message: buildMessage(tpl, c),
+          isLead:  c.isLead || false,
+        }));
+
+        sentCount = 0; errorCount = 0;
+        document.getElementById('progressWrap').style.display = 'block';
+        document.getElementById('startAutoBtn').disabled = true;
+        document.getElementById('stopBtn').style.display = 'inline-flex';
+
+        fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contacts: payload, minDelay, maxDelay, socketId: socket.id }),
+        }).then(r => r.json()).then(j => {
+          if (j.error) { log('❌ '+j.error,'error'); resetAutoUI(); }
+          else log(`🤖 Auto-send started for ${payload.length} contacts`, 'info');
+        });
+      }
+      function stopAuto() { fetch('/api/stop',{method:'POST'}); log('🛑 Stop requested…','warn'); }
+      function resetAutoUI() {
+        document.getElementById('startAutoBtn').disabled = false;
+        document.getElementById('stopBtn').style.display = 'none';
+      }
+
+      /* ═══ SOCKET ═══ */
+      socket.on('wa_progress', ({ index, name, status }) => {
+        if (status === 'sent') {
+          sentCount++;
+          const c = queueContacts[index];
+          if (c) { c.messageSent = true; applyStatusUpdate(c.placeId, { messageSent: true, status: 'contacted' }); }
+        }
+        if (status === 'error') errorCount++;
+        updateProgress();
+        const badge = document.getElementById(`badge_${index}`);
+        if (badge) {
+          badge.className = status === 'sent' ? 'badge b-sent' : status === 'error' ? 'badge b-error' : 'badge b-active';
+          badge.textContent = status === 'sent' ? '✅ Sent' : status === 'error' ? '❌ Error' : '🔄 Sending';
+        }
+      });
+      socket.on('wa_log',  ({ msg, type }) => log(msg, type));
+      socket.on('wa_done', ({ sent, errors }) => { log(`🎉 Complete! ${sent} sent, ${errors} errors.`, 'lead'); resetAutoUI(); });
+
+      /* ═══ LOG ═══ */
+      function log(msg, type='info') {
+        const box = document.getElementById('logBox');
+        if (box.querySelector('.l-info')?.textContent === 'Waiting to start…') box.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = `l-${type}`;
+        p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        box.appendChild(p);
+        box.scrollTop = box.scrollHeight;
+      }
+
+      // ✅ Init chips: Hot Leads + Has Phone + Not Contacted
+      document.getElementById('fHot').className  = 'toggle-chip active-orange';
+      document.getElementById('fcHas').className = 'toggle-chip active-green';
+      document.getElementById('fsNew').className = 'toggle-chip active-blue';
+
+      loadLeads();
+    </script>
+  </body>
+</html>

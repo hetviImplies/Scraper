@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maps Scraper</title>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #0f1117;
+        color: #e2e8f0;
+        min-height: 100vh;
+      }
+
+      header {
+        background: linear-gradient(135deg, #1a1d2e, #16213e);
+        border-bottom: 1px solid #2d3748;
+        padding: 20px 32px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+      header span { font-size: 1.6rem; }
+
+      .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+      .card {
+        background: #1a1d2e;
+        border: 1px solid #2d3748;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+      .card > h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #94a3b8;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .section-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #6366f1;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        margin: 22px 0 14px;
+      }
+      .section-label:first-of-type { margin-top: 0; }
+      .section-label::after { content: ""; flex: 1; height: 1px; background: #2d3748; }
+
+      .form-grid { display: grid; gap: 16px; }
+      .g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+      .g3 { grid-template-columns: 1fr 1fr 1fr; }
+      .g2 { grid-template-columns: 1fr 1fr; }
+      .g1 { grid-template-columns: 1fr; }
+      @media (max-width: 900px) { .g4 { grid-template-columns: 1fr 1fr; } }
+      @media (max-width: 700px) { .g4, .g3, .g2 { grid-template-columns: 1fr; } }
+
+      .field label {
+        display: block;
+        font-size: 0.78rem;
+        color: #94a3b8;
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+      .field label small { font-weight: 400; color: #4b5563; margin-left: 4px; }
+      .field input {
+        width: 100%;
+        padding: 10px 14px;
+        background: #0f1117;
+        border: 1px solid #2d3748;
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+        transition: border 0.2s;
+      }
+      .field input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      }
+
+      .query-preview-row { display: flex; align-items: center; gap: 10px; }
+      .query-preview-row input {
+        flex: 1;
+        padding: 10px 14px;
+        background: #0a0c14;
+        border: 1px solid #2d3748;
+        border-radius: 8px;
+        color: #c4b5fd;
+        font-size: 0.95rem;
+        font-style: italic;
+      }
+      .query-preview-row input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        font-style: normal;
+        color: #e2e8f0;
+      }
+      .edit-badge {
+        font-size: 0.72rem;
+        color: #4b5563;
+        white-space: nowrap;
+        background: #1a1d2e;
+        border: 1px solid #2d3748;
+        padding: 3px 9px;
+        border-radius: 6px;
+      }
+
+      .btn-row { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+      button {
+        padding: 11px 26px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      #scrapeBtn { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+      #scrapeBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4); }
+      #scrapeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+      #stopBtn { background: #ef4444; color: #fff; display: none; }
+      #stopBtn:hover { background: #dc2626; }
+
+      /* ── Stats ── */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+      @media (max-width: 800px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+      @media (max-width: 500px) { .stats { grid-template-columns: 1fr 1fr; } }
+      .stat {
+        background: #1a1d2e;
+        border: 1px solid #2d3748;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+      }
+      .stat .value { font-size: 1.8rem; font-weight: 700; color: #6366f1; }
+      .stat .label { font-size: 0.76rem; color: #64748b; margin-top: 4px; }
+      .stat.dup .value { color: #f59e0b; }
+      .stat.hot .value { color: #f59e0b; }
+      .stat.grand .value { color: #4ade80; }
+
+      /* ── Progress ── */
+      .progress-wrap { margin-bottom: 24px; display: none; }
+      .progress-bar-bg { background: #2d3748; border-radius: 99px; height: 8px; overflow: hidden; }
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        border-radius: 99px;
+        transition: width 0.4s;
+        width: 0%;
+      }
+      .progress-label { font-size: 0.82rem; color: #64748b; margin-top: 6px; }
+
+      /* ── Log ── */
+      #logBox {
+        background: #0a0c14;
+        border: 1px solid #1e2235;
+        border-radius: 10px;
+        padding: 16px;
+        height: 380px;
+        overflow-y: auto;
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 0.82rem;
+        line-height: 1.7;
+      }
+      #logBox p { margin: 0; }
+      .log-info { color: #94a3b8; }
+      .log-success { color: #4ade80; }
+      .log-lead { color: #f59e0b; font-weight: 600; }
+      .log-warn { color: #fb923c; }
+      .log-error { color: #f87171; }
+
+      /* ── Downloads ── */
+      .dl-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+      .dl-btn {
+        padding: 10px 22px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dl-leads { background: #059669; color: #fff; }
+      .dl-leads:hover { background: #047857; }
+      .dl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      .dl-clear { background: transparent; border: 1px solid #ef444455; color: #f87171; font-size: 0.85rem; padding: 8px 16px; }
+      .dl-clear:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
+
+      /* Pipeline info badge */
+      .pipeline-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        color: #4ade80;
+        background: rgba(74,222,128,0.08);
+        border: 1px solid rgba(74,222,128,0.2);
+        padding: 5px 12px;
+        border-radius: 8px;
+        margin-left: auto;
+      }
+
+      /* ── Status Badge ── */
+      #statusBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 99px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: #1e2235;
+        color: #64748b;
+        border: 1px solid #2d3748;
+        float: right;
+      }
+      #statusBadge.active { background: rgba(99,102,241,0.15); color: #818cf8; border-color: #6366f1; }
+      #statusBadge.done { background: rgba(74,222,128,0.1); color: #4ade80; border-color: #16a34a; }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .dot.pulse { animation: pulse 1s infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+      /* ── Tom Select Dark Theme ── */
+      .ts-wrapper .ts-control {
+        background: #0f1117 !important; border: 1px solid #2d3748 !important;
+        border-radius: 8px !important; color: #e2e8f0 !important;
+        min-height: 42px !important; padding: 4px 10px !important;
+        font-size: 0.94rem; box-shadow: none !important; cursor: pointer;
+      }
+      .ts-wrapper.focus .ts-control { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
+      .ts-wrapper .ts-control input { color: #e2e8f0 !important; background: transparent !important; }
+      .ts-wrapper.single .ts-control .placeholder { color: #4b5563 !important; }
+      .ts-wrapper.single .ts-control:after { border-top-color: #64748b !important; }
+      .ts-wrapper.single.dropdown-active .ts-control:after { border-bottom-color: #64748b !important; border-top-color: transparent !important; }
+      .ts-wrapper .item { color: #e2e8f0 !important; }
+      .ts-dropdown {
+        background: #1a1d2e !important; border: 1px solid #374151 !important;
+        border-radius: 8px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;
+        margin-top: 3px !important;
+      }
+      .ts-dropdown .ts-dropdown-content { max-height: 210px; }
+      .ts-dropdown .option { color: #cbd5e1 !important; padding: 9px 14px !important; font-size: 0.9rem; cursor: pointer; }
+      .ts-dropdown .option:hover, .ts-dropdown .option.active { background: rgba(99,102,241,0.22) !important; color: #a5b4fc !important; }
+      .ts-dropdown .option.selected { background: rgba(99,102,241,0.12) !important; color: #818cf8 !important; }
+      .ts-dropdown input {
+        background: #0a0c14 !important; color: #e2e8f0 !important;
+        border: none !important; border-bottom: 1px solid #2d3748 !important;
+        padding: 8px 13px !important; font-size: 0.875rem !important;
+        outline: none !important; width: 100% !important; caret-color: #6366f1;
+      }
+      .ts-dropdown input::placeholder { color: #4b5563 !important; }
+      .ts-dropdown .no-results { color: #64748b !important; padding: 10px 14px; font-size: 0.875rem; }
+
+      #customNicheRow { display: none; margin-top: 14px; }
+
+      /* Grand total banner */
+      #grandBanner {
+        display: none;
+        background: rgba(74,222,128,0.07);
+        border: 1px solid rgba(74,222,128,0.2);
+        border-radius: 10px;
+        padding: 14px 20px;
+        margin-bottom: 24px;
+        font-size: 0.9rem;
+        color: #4ade80;
+        display: none;
+        align-items: center;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span>🗺️</span>
+      <h1>Google Maps Scraper</h1>
+    </header>
+
+    <div class="container">
+
+      <!-- ── Grand Total Banner ── -->
+      <div id="grandBanner">
+        <span>📂</span>
+        <span id="grandBannerText"></span>
+      </div>
+
+      <!-- ── Config Card ── -->
+      <div class="card">
+        <h2>
+          Configuration
+          <span id="statusBadge"><span class="dot"></span> Idle</span>
+        </h2>
+
+        <div class="section-label">📍 Location</div>
+        <div class="form-grid g3">
+          <div class="field"><label>Country</label><select id="countrySelect"></select></div>
+          <div class="field"><label>State / Province</label><select id="stateSelect"></select></div>
+          <div class="field"><label>City</label><select id="citySelect"></select></div>
+        </div>
+
+        <div class="section-label">🏷️ Business Type</div>
+        <div class="form-grid g1">
+          <div class="field"><label>Niche / Category</label><select id="nicheSelect"></select></div>
+        </div>
+
+        <div id="customNicheRow">
+          <div class="field">
+            <label>Custom Business Type <small>(e.g. yoga studios, driving schools…)</small></label>
+            <input id="customNicheInput" type="text" placeholder="Type your niche..." />
+          </div>
+        </div>
+
+        <div class="section-label">⚙️ Scrape Settings</div>
+        <div class="form-grid g4">
+          <div class="field">
+            <label>Max Scroll Pages</label>
+            <input id="pagesInput" type="number" value="200" min="1" max="500" />
+          </div>
+          <div class="field">
+            <label>Max Businesses</label>
+            <input id="bizInput" type="number" value="300" min="1" max="1000" />
+          </div>
+          <div class="field">
+            <label>Min Rating <small>(filter by ⭐)</small></label>
+            <select id="minRatingSelect"></select>
+          </div>
+          <div class="field">
+            <label>Branch Filter <small>(locations)</small></label>
+            <select id="branchSelect"></select>
+          </div>
+        </div>
+
+        <div class="section-label">🔍 Search Query Preview</div>
+        <div class="form-grid g1">
+          <div class="field">
+            <label>Auto-generated query <small>(click to edit manually)</small></label>
+            <div class="query-preview-row">
+              <input id="queryPreview" type="text" value="Restaurants in Surat, Gujarat, India" spellcheck="false" />
+              <span class="edit-badge">✏️ editable</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="scrapeBtn" onclick="startScraping()">🚀 Start Scraping</button>
+          <button id="stopBtn" onclick="stopScraping()">🛑 Stop</button>
+        </div>
+      </div>
+
+      <!-- ── Stats ── -->
+      <div class="stats">
+        <div class="stat">
+          <div class="value" id="statTotal">0</div>
+          <div class="label">New This Run</div>
+        </div>
+        <div class="stat hot">
+          <div class="value" id="statLeads">0</div>
+          <div class="label">🔥 Hot Leads</div>
+        </div>
+        <div class="stat dup">
+          <div class="value" id="statDups">0</div>
+          <div class="label">♻️ Duplicates Skipped</div>
+        </div>
+        <div class="stat">
+          <div class="value" id="statPercent">0%</div>
+          <div class="label">Progress</div>
+        </div>
+        <div class="stat grand">
+          <div class="value" id="statGrand">—</div>
+          <div class="label">📂 Total in leads.json</div>
+        </div>
+      </div>
+
+      <!-- ── Progress ── -->
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">Starting...</div>
+      </div>
+
+      <!-- ── Live Log ── -->
+      <div class="card">
+        <h2>Live Log</h2>
+        <div id="logBox"><p class="log-info">Waiting to start…</p></div>
+      </div>
+
+      <!-- ── Downloads ── -->
+      <div class="card">
+        <h2>Download Results</h2>
+        <p style="font-size:0.82rem;color:#64748b;margin-bottom:16px;">
+          All scraped data is stored in a single <code style="color:#818cf8;background:#0f1117;padding:2px 6px;border-radius:4px;">leads.json</code> file.
+          Re-running the scraper on the same query will <strong style="color:#f59e0b;">skip duplicates</strong> via Google Place ID.
+          Each lead includes pipeline fields: <code style="color:#818cf8;background:#0f1117;padding:2px 6px;border-radius:4px;">status</code>, <code style="color:#818cf8;background:#0f1117;padding:2px 6px;border-radius:4px;">messageSent</code>, <code style="color:#818cf8;background:#0f1117;padding:2px 6px;border-radius:4px;">replied</code>, <code style="color:#818cf8;background:#0f1117;padding:2px 6px;border-radius:4px;">dealClosed</code>.
+        </p>
+        <div class="dl-row">
+          <button class="dl-btn dl-leads" id="dlLeads" onclick="download('leads.json')" disabled>
+            📥 Download leads.json
+          </button>
+          <button class="dl-btn dl-clear" onclick="clearLeads()">
+            🗑️ Clear all leads
+          </button>
+          <span class="pipeline-note" id="leadsCountNote" style="display:none">
+            📂 <span id="leadsCountText"></span> leads stored
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* ════════════════════════════════════════════
+         Niche Catalogue
+      ════════════════════════════════════════════ */
+      const NICHES = [
+        { value: "Restaurants", label: "🍽️  Restaurants" },
+        { value: "Hotels", label: "🏨  Hotels" },
+        { value: "Hospitals", label: "🏥  Hospitals" },
+        { value: "Clinics", label: "🩺  Clinics" },
+        { value: "Pharmacies", label: "💊  Pharmacies" },
+        { value: "Diagnostic Centers", label: "🔬  Diagnostic Centers" },
+        { value: "Gyms", label: "💪  Gyms & Fitness Centers" },
+        { value: "Yoga Centers", label: "🧘  Yoga Centers" },
+        { value: "Swimming Pools", label: "🏊  Swimming Pools" },
+        { value: "Schools", label: "🏫  Schools" },
+        { value: "Colleges", label: "🎓  Colleges & Universities" },
+        { value: "Coaching Classes", label: "📚  Coaching / Tuition Classes" },
+        { value: "Beauty Salons", label: "💇  Beauty Salons" },
+        { value: "Spas", label: "🧖  Spas & Wellness" },
+        { value: "Barbershops", label: "✂️  Barbershops" },
+        { value: "Banks", label: "🏦  Banks" },
+        { value: "ATMs", label: "🏧  ATMs" },
+        { value: "Petrol Pumps", label: "⛽  Petrol Pumps" },
+        { value: "Supermarkets", label: "🛒  Supermarkets" },
+        { value: "Shopping Malls", label: "🏬  Shopping Malls" },
+        { value: "Jewellery Shops", label: "💍  Jewellery Shops" },
+        { value: "Clothing Stores", label: "👗  Clothing Stores" },
+        { value: "Electronics Shops", label: "📱  Electronics Shops" },
+        { value: "Furniture Stores", label: "🛋️  Furniture Stores" },
+        { value: "Real Estate Agents", label: "🏠  Real Estate Agents" },
+        { value: "Lawyers", label: "⚖️  Lawyers & Law Firms" },
+        { value: "CA Firms", label: "📊  CA / Accounting Firms" },
+        { value: "IT Companies", label: "💻  IT Companies" },
+        { value: "Dentists", label: "🦷  Dentists" },
+        { value: "Doctors", label: "👨‍⚕️  Doctors" },
+        { value: "Plumbers", label: "🔧  Plumbers" },
+        { value: "Electricians", label: "⚡  Electricians" },
+        { value: "Car Dealers", label: "🚗  Car Dealers" },
+        { value: "Auto Repair", label: "🔩  Auto Repair / Mechanics" },
+        { value: "Cafes", label: "☕  Cafes & Coffee Shops" },
+        { value: "Bakeries", label: "🥐  Bakeries" },
+        { value: "Catering Services", label: "🍱  Catering Services" },
+        { value: "Travel Agents", label: "✈️  Travel Agents" },
+        { value: "Insurance Agents", label: "🛡️  Insurance Agents" },
+        { value: "Photographers", label: "📷  Photographers" },
+        { value: "Event Planners", label: "🎉  Event Planners" },
+        { value: "Wedding Venues", label: "💒  Wedding Venues" },
+        { value: "Packers and Movers", label: "📦  Packers & Movers" },
+        { value: "Pest Control", label: "🐛  Pest Control Services" },
+        { value: "Custom", label: "✏️  Custom (type your own)" },
+      ];
+
+      const RATINGS = [
+        { value: "0", label: "⭐ Any Rating" },
+        { value: "3.0", label: "≥ 3.0 ⭐" },
+        { value: "3.5", label: "≥ 3.5 ⭐" },
+        { value: "4.0", label: "≥ 4.0 ⭐" },
+        { value: "4.5", label: "≥ 4.5 ⭐" },
+        { value: "4.8", label: "≥ 4.8 ⭐" },
+      ];
+
+      const BRANCHES = [
+        { value: "all", label: "🏢  All Businesses" },
+        { value: "multiple", label: "🏪  Multiple Branches Only" },
+        { value: "single", label: "📍  Single Branch Only" },
+      ];
+
+      const DEFAULT_COUNTRY = "IN", DEFAULT_STATE = "GJ", DEFAULT_CITY = "Surat", DEFAULT_NICHE = "Restaurants";
+
+      let countryTS, stateTS, cityTS, nicheTS, ratingTS, branchTS;
+      let countriesData = [], statesData = [], citiesData = [];
+      let isInitializing = true;
+
+      /* ════════════════════════════════════════════
+         Init
+      ════════════════════════════════════════════ */
+      async function initForm() {
+        const tsBase = {
+          searchField: [], maxOptions: 500, options: [],
+          render: { no_results: () => `<div class="no-results">No results found</div>` },
+        };
+
+        countryTS = new TomSelect("#countrySelect", { ...tsBase, valueField: "isoCode", labelField: "name", searchField: ["name"], placeholder: "Select Country…", maxOptions: 300, onChange: onCountryChange });
+        stateTS = new TomSelect("#stateSelect", { ...tsBase, valueField: "isoCode", labelField: "name", searchField: ["name"], placeholder: "Select State…", onChange: onStateChange });
+        cityTS = new TomSelect("#citySelect", { ...tsBase, valueField: "name", labelField: "name", searchField: ["name"], placeholder: "Select City…", onChange: updateQuery });
+        nicheTS = new TomSelect("#nicheSelect", { ...tsBase, options: NICHES, valueField: "value", labelField: "label", searchField: ["label"], placeholder: "Select Niche…", maxOptions: NICHES.length, onChange: onNicheChange });
+
+        ratingTS = new TomSelect("#minRatingSelect", { options: RATINGS, valueField: "value", labelField: "label", searchField: [], placeholder: "Min Rating…", maxOptions: RATINGS.length, render: { no_results: () => `<div class="no-results">No results found</div>` } });
+        ratingTS.setValue("0", true);
+
+        branchTS = new TomSelect("#branchSelect", { options: BRANCHES, valueField: "value", labelField: "label", searchField: [], placeholder: "Branch Filter…", maxOptions: BRANCHES.length, render: { no_results: () => `<div class="no-results">No results found</div>` } });
+        branchTS.setValue("all", true);
+
+        countriesData = await fetch("/api/countries").then((r) => r.json());
+        countryTS.addOptions(countriesData);
+        countryTS.setValue(DEFAULT_COUNTRY, true);
+
+        statesData = await fetch(`/api/states/${DEFAULT_COUNTRY}`).then((r) => r.json());
+        stateTS.addOptions(statesData);
+        stateTS.setValue(DEFAULT_STATE, true);
+
+        citiesData = await fetch(`/api/cities/${DEFAULT_COUNTRY}/${DEFAULT_STATE}`).then((r) => r.json());
+        cityTS.addOptions(citiesData);
+        const hasDefaultCity = citiesData.some((c) => c.name === DEFAULT_CITY);
+        cityTS.setValue(hasDefaultCity ? DEFAULT_CITY : citiesData[0]?.name || "", true);
+
+        nicheTS.setValue(DEFAULT_NICHE, true);
+
+        isInitializing = false;
+        updateQuery();
+
+        // ── Load current leads count on page open
+        refreshLeadsCount();
+      }
+
+      async function refreshLeadsCount() {
+        try {
+          const stats = await fetch("/api/leads/stats").then(r => r.json());
+          if (stats.total > 0) {
+            document.getElementById("statGrand").textContent = stats.total;
+            document.getElementById("leadsCountNote").style.display = "inline-flex";
+            document.getElementById("leadsCountText").textContent = `${stats.total} (${stats.hot} hot)`;
+            document.getElementById("dlLeads").disabled = false;
+          }
+        } catch {}
+      }
+
+      /* ════════════════════════════════════════════
+         Cascade Handlers
+      ════════════════════════════════════════════ */
+      async function onCountryChange(value) {
+        if (isInitializing || !value) return;
+        stateTS.clear(true); stateTS.clearOptions();
+        cityTS.clear(true); cityTS.clearOptions();
+        statesData = await fetch(`/api/states/${value}`).then((r) => r.json());
+        stateTS.addOptions(statesData);
+        if (statesData.length > 0) {
+          stateTS.setValue(statesData[0].isoCode, true);
+          await loadCities(value, statesData[0].isoCode, null);
+        }
+        updateQuery();
+      }
+
+      async function onStateChange(value) {
+        if (isInitializing || !value) return;
+        cityTS.clear(true); cityTS.clearOptions();
+        await loadCities(countryTS.getValue(), value, null);
+        updateQuery();
+      }
+
+      async function loadCities(countryCode, stateCode, preferredCity) {
+        citiesData = await fetch(`/api/cities/${countryCode}/${stateCode}`).then((r) => r.json());
+        cityTS.addOptions(citiesData);
+        if (citiesData.length > 0) {
+          const target = preferredCity && citiesData.some((c) => c.name === preferredCity) ? preferredCity : citiesData[0].name;
+          cityTS.setValue(target, true);
+        }
+        updateQuery();
+      }
+
+      function onNicheChange(value) {
+        document.getElementById("customNicheRow").style.display = value === "Custom" ? "block" : "none";
+        updateQuery();
+      }
+
+      function updateQuery() {
+        if (isInitializing) return;
+        const nicheKey = nicheTS?.getValue() || "";
+        const city = cityTS?.getValue() || "";
+        const stateCode = stateTS?.getValue() || "";
+        const countryCode = countryTS?.getValue() || "";
+        const stateName = statesData.find((s) => s.isoCode === stateCode)?.name || "";
+        const countryName = countriesData.find((c) => c.isoCode === countryCode)?.name || "";
+        const niche = nicheKey === "Custom" ? document.getElementById("customNicheInput").value.trim() : nicheKey;
+        const location = [city, stateName, countryName].filter(Boolean).join(", ");
+        const query = niche && location ? `${niche} in ${location}` : niche ? niche : location;
+        document.getElementById("queryPreview").value = query;
+      }
+
+      /* ════════════════════════════════════════════
+         Socket + Scraper
+      ════════════════════════════════════════════ */
+      const socket = io();
+      let totalBusinesses = 0, sessionNew = 0, sessionLeads = 0, sessionDups = 0;
+      const logBox = document.getElementById("logBox");
+      const scrapeBtn = document.getElementById("scrapeBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const statusBadge = document.getElementById("statusBadge");
+
+      function appendLog(msg, type = "info") {
+        const p = document.createElement("p");
+        p.className = `log-${type}`;
+        p.textContent = msg;
+        logBox.appendChild(p);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      function setStatus(state) {
+        statusBadge.className = state;
+        if (state === "active") statusBadge.innerHTML = `<span class="dot pulse"></span> Scraping…`;
+        else if (state === "done") statusBadge.innerHTML = `<span class="dot"></span> Done`;
+        else statusBadge.innerHTML = `<span class="dot"></span> Idle`;
+      }
+
+      function updateProgress(current) {
+        document.getElementById("progressWrap").style.display = "block";
+        if (totalBusinesses > 0) {
+          const pct = Math.round((current / totalBusinesses) * 100);
+          document.getElementById("progressFill").style.width = pct + "%";
+          document.getElementById("progressLabel").textContent = `${current} / ${totalBusinesses} visited`;
+          document.getElementById("statPercent").textContent = pct + "%";
+        }
+      }
+
+      socket.on("log", ({ msg, type }) => appendLog(msg, type));
+      socket.on("total", (n) => { totalBusinesses = n; });
+
+      socket.on("progress", ({ visited, saved, entry, isDuplicate }) => {
+        updateProgress(visited);
+        if (isDuplicate) {
+          sessionDups++;
+          document.getElementById("statDups").textContent = sessionDups;
+        } else if (entry) {
+          sessionNew = saved;
+          document.getElementById("statTotal").textContent = saved;
+          if (entry.isLead) {
+            sessionLeads++;
+            document.getElementById("statLeads").textContent = sessionLeads;
+          }
+        }
+      });
+
+      socket.on("done", ({ total, leads, duplicates, grandTotal }) => {
+        setStatus("done");
+        scrapeBtn.disabled = false;
+        stopBtn.style.display = "none";
+        document.getElementById("dlLeads").disabled = false;
+        if (grandTotal) {
+          document.getElementById("statGrand").textContent = grandTotal;
+          document.getElementById("leadsCountNote").style.display = "inline-flex";
+          document.getElementById("leadsCountText").textContent = `${grandTotal} total`;
+        }
+        appendLog(`\n🎉 Done! ${total} new scraped, ${leads} hot leads, ${duplicates ?? 0} duplicates skipped.`, "lead");
+        appendLog(`📂 leads.json now has ${grandTotal ?? "?"} total entries.`, "success");
+        refreshLeadsCount();
+      });
+
+      socket.on("error", (msg) => {
+        appendLog(`❌ ${msg}`, "error");
+        setStatus("");
+        scrapeBtn.disabled = false;
+        stopBtn.style.display = "none";
+      });
+
+      async function startScraping() {
+        const searchQuery = document.getElementById("queryPreview").value.trim();
+        const maxPages = parseInt(document.getElementById("pagesInput").value) || 200;
+        const maxBusinesses = parseInt(document.getElementById("bizInput").value) || 300;
+        const minRating = parseFloat(ratingTS.getValue()) || 0;
+        const branchFilter = branchTS.getValue() || "all";
+
+        if (!searchQuery) return alert("Please select a location and niche first.");
+
+        logBox.innerHTML = "";
+        totalBusinesses = 0; sessionNew = 0; sessionLeads = 0; sessionDups = 0;
+        document.getElementById("statTotal").textContent = "0";
+        document.getElementById("statLeads").textContent = "0";
+        document.getElementById("statDups").textContent = "0";
+        document.getElementById("statPercent").textContent = "0%";
+        document.getElementById("progressFill").style.width = "0%";
+        document.getElementById("progressWrap").style.display = "none";
+
+        scrapeBtn.disabled = true;
+        stopBtn.style.display = "inline-block";
+        setStatus("active");
+
+        const res = await fetch("/api/scrape", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ searchQuery, maxPages, maxBusinesses, socketId: socket.id, minRating, branchFilter }),
+        });
+        const json = await res.json();
+        if (json.error) {
+          appendLog("❌ " + json.error, "error");
+          setStatus("");
+          scrapeBtn.disabled = false;
+          stopBtn.style.display = "none";
+        }
+      }
+
+      async function stopScraping() {
+        await fetch("/api/stop", { method: "POST" });
+        appendLog("🛑 Stop requested…", "warn");
+      }
+
+      function download(file) {
+        window.open(`/api/download/${file}`, "_blank");
+      }
+
+      async function clearLeads() {
+        if (!confirm("⚠️ This will delete ALL entries in leads.json. Are you sure?")) return;
+        await fetch("/api/leads/clear", { method: "POST" });
+        document.getElementById("statGrand").textContent = "0";
+        document.getElementById("leadsCountNote").style.display = "none";
+        document.getElementById("dlLeads").disabled = true;
+        appendLog("🗑️ leads.json cleared.", "warn");
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        initForm();
+        document.getElementById("customNicheInput").addEventListener("input", updateQuery);
+      });
+    </script>
+  </body>
+</html>

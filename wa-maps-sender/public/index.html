@@ -660,9 +660,9 @@
         const body = document.getElementById('contactBody');
         body.innerHTML = data.slice(0,100).map((c,i) => {
           const phone = cleanPhone(c.phone);
-          const socialWA = c.social?.find(s => s.platform === 'whatsapp');
-          const socialIG = c.social?.find(s => s.platform === 'instagram');
-          const socialFB = c.social?.find(s => s.platform === 'facebook');
+          const socialWA = (Array.isArray(c.social) ? c.social : []).find(s => s.platform === 'whatsapp');
+          const socialIG = (Array.isArray(c.social) ? c.social : []).find(s => s.platform === 'instagram');
+          const socialFB = (Array.isArray(c.social) ? c.social : []).find(s => s.platform === 'facebook');
           const socialStr = [
             socialWA ? `<a href="${socialWA.url}" target="_blank" style="color:#25d366">WA</a>` : '',
             socialIG ? `<a href="${socialIG.url}" target="_blank" style="color:#e1306c">IG</a>` : '',
@@ -782,7 +782,7 @@
         let source = filteredContacts.length > 0 ? filteredContacts : allContacts;
         queueContacts = source.filter(c => {
           const phone  = cleanPhone(c.phone, countryCode);
-          const waLink = c.social?.find(s => s.platform==='whatsapp')?.url;
+          const waLink = (Array.isArray(c.social) ? c.social : []).find(s => s.platform === 'whatsapp')
           if (!phone && !waLink) return false;
           if (filter === 'leads' && !c.isLead) return false;
           if (filter === 'wa'    && !waLink)   return false;
@@ -798,7 +798,7 @@
         const queue = document.getElementById('manualQueue');
         queue.innerHTML = queueContacts.map((c,i) => {
           const phone  = cleanPhone(c.phone, countryCode);
-          const waLink = c.social?.find(s => s.platform==='whatsapp')?.url;
+          const waLink = (Array.isArray(c.social) ? c.social : []).find(s => s.platform === 'whatsapp')
           const msg    = buildMessage(tpl, c);
           let finalLink;
           if (phone) {

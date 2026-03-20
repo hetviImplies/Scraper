@@ -1,0 +1,22 @@
+Hi {{name}}
+
+I’m Hetvi from Surat — I help businesses grow online.
+
+I was researching gyms in Surat and found yours. Your rating is really good ({{rating}})
+I noticed there’s no website yet.
+
+These days, many people check online before joining, and a simple website can help bring more inquiries.
+
+It can include:
+• Inquiry form (direct WhatsApp leads)  
+• photos & transformation gallery  
+• Plans, fees & offers  
+
+You can check my work here:
+https://hetvisolutions.com/
+
+I’m reaching out to a few selected gyms I feel have good potential.
+If you want, I can create a free demo website for your gym — just to give you an idea.
+No pressure
+
+Let me know

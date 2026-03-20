@@ -1,0 +1,477 @@
+const { chromium } = require('playwright');
+const fs = require('fs');
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+function safeFlat(arr, depth = 5) {
+  try { return arr.flat(depth); } catch { return []; }
+}
+
+// ─── RESPONSE PARSER ──────────────────────────────────────────────────────────
+function parseMapResponse(rawText) {
+  let text = rawText.trim();
+
+  if (text.startsWith('{')) {
+    text = text.replace(/\/\*""\*\/$/, '').trim();
+    try {
+      const outer = JSON.parse(text);
+      if (outer && typeof outer.d === 'string') {
+        let inner = outer.d.trim();
+        if (inner.startsWith(`)]}'`))   inner = inner.slice(4);
+        if (inner.startsWith(')]}\\n')) inner = inner.slice(5);
+        if (inner.startsWith(')]}'))    inner = inner.slice(3);
+        return JSON.parse(inner);
+      }
+    } catch { /* fall through */ }
+  }
+
+  if (text.startsWith(`)]}'`))   text = text.slice(4);
+  if (text.startsWith(')]}\\n')) text = text.slice(5);
+  if (text.startsWith(')]}'))    text = text.slice(3);
+  return JSON.parse(text);
+}
+
+// ─── REVIEW COUNT EXTRACTOR ───────────────────────────────────────────────────
+// Google Maps stores review count in several possible locations.
+// This helper checks all known indices and also does a deep numeric search
+// near the rating value so we never miss it.
+function extractReviewCount(entry, rating) {
+  // ── 1. Most common: entry[4][8] ──
+  if (Array.isArray(entry[4])) {
+    // entry[4][8] — standard
+    if (entry[4][8] != null && typeof entry[4][8] === 'number' && entry[4][8] > 0)
+      return String(entry[4][8]);
+
+    // Sometimes it sits at entry[4][9]
+    if (entry[4][9] != null && typeof entry[4][9] === 'number' && entry[4][9] > 0)
+      return String(entry[4][9]);
+
+    // Flat search inside entry[4] for a large integer near the rating
+    const flat4 = safeFlat(entry[4]);
+    for (const val of flat4) {
+      if (typeof val === 'number' && Number.isInteger(val) && val >= 1 && val <= 999999) {
+        // Make sure it's not the rating itself (ratings are floats like 4.4)
+        if (val !== parseFloat(rating)) return String(val);
+      }
+    }
+  }
+
+  // ── 2. Alternate indices known to carry review data ──
+  for (const idx of [49, 51, 52, 175, 176]) {
+    if (entry[idx] == null) continue;
+    if (typeof entry[idx] === 'number' && Number.isInteger(entry[idx]) && entry[idx] > 0)
+      return String(entry[idx]);
+    if (Array.isArray(entry[idx])) {
+      const flat = safeFlat(entry[idx]);
+      const found = flat.find(x =>
+        typeof x === 'number' && Number.isInteger(x) && x >= 1 && x <= 999999
+      );
+      if (found != null) return String(found);
+    }
+  }
+
+  // ── 3. Last resort: scan the full entry for a number that looks like a review count ──
+  // We look for integers > 4 (to skip star ratings) that appear right after the rating float.
+  const fullFlat = safeFlat(entry);
+  for (let i = 0; i < fullFlat.length; i++) {
+    if (fullFlat[i] === parseFloat(rating)) {
+      // Check the next few values for a plausible review count
+      for (let j = i + 1; j < Math.min(i + 6, fullFlat.length); j++) {
+        const v = fullFlat[j];
+        if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 999999)
+          return String(v);
+      }
+    }
+  }
+
+  return null;
+}
+
+// ─── BUSINESS EXTRACTOR ───────────────────────────────────────────────────────
+function extractBusinessesFromJSON(json, query) {
+  const results = [];
+
+  function deepSearch(arr, depth = 0) {
+    if (!Array.isArray(arr) || depth > 12) return;
+
+    arr.forEach(entry => {
+      if (!Array.isArray(entry)) return;
+
+      try {
+        const name = typeof entry[11] === 'string' && entry[11].length > 2 ? entry[11] : null;
+        if (!name) { deepSearch(entry, depth + 1); return; }
+        if (name.startsWith('gcid:') || name.length < 3) { deepSearch(entry, depth + 1); return; }
+
+        let placeId = 'N/A';
+        if (typeof entry[78] === 'string') placeId = entry[78];
+        else if (typeof entry[10] === 'string' && entry[10].includes('0x')) placeId = entry[10];
+
+        let rating = null;
+        if (Array.isArray(entry[4]) && entry[4][7] != null) rating = String(entry[4][7]);
+
+        // ── FIXED: use dedicated extractor ──
+        const reviewCount = extractReviewCount(entry, rating);
+
+        let address = 'N/A';
+        if (typeof entry[18] === 'string' && entry[18].length > 5) {
+          address = entry[18];
+          if (address.startsWith(name + ', ')) address = address.slice(name.length + 2);
+        } else if (Array.isArray(entry[2])) {
+          address = entry[2].filter(x => typeof x === 'string').join(', ');
+        }
+
+        let category = 'N/A';
+        if (Array.isArray(entry[13]) && typeof entry[13][0] === 'string') category = entry[13][0];
+
+        let phone = 'Not Found';
+        for (const idx of [178, 183, 182, 16, 35]) {
+          if (phone !== 'Not Found') break;
+          if (Array.isArray(entry[idx])) {
+            const flat = safeFlat(entry[idx]);
+            const found = flat.find(x =>
+              typeof x === 'string' &&
+              /^(\+91[\s-]?)?[0-9\s\-()]{7,15}$/.test(x.trim()) &&
+              x.replace(/\D/g, '').length >= 7
+            );
+            if (found) phone = found.trim();
+          }
+        }
+
+        let website = 'Not Found';
+        if (Array.isArray(entry[7])) {
+          const flat = safeFlat(entry[7]);
+          const found = flat.find(x => typeof x === 'string' && x.startsWith('http'));
+          if (found) website = found;
+        }
+
+        let social = null;
+        const socialPatterns = ['instagram.com', 'facebook.com', 'twitter.com', 'linkedin.com'];
+        if (website !== 'Not Found' && socialPatterns.some(p => website.includes(p))) {
+          social = website;
+          website = 'Not Found';
+        }
+        for (const idx of [7, 111, 112]) {
+          if (social) break;
+          if (Array.isArray(entry[idx])) {
+            const flat = safeFlat(entry[idx]);
+            const found = flat.find(x =>
+              typeof x === 'string' && socialPatterns.some(p => x.includes(p))
+            );
+            if (found) social = found;
+          }
+        }
+
+        let openingHours = null;
+        let isOpenNow = null;
+        for (const idx of [34, 77, 88, 203]) {
+          if (openingHours) break;
+          if (!Array.isArray(entry[idx])) continue;
+          const flat = safeFlat(entry[idx]);
+          if (isOpenNow === null) {
+            const openStr = flat.find(x => typeof x === 'string' &&
+              (x.toLowerCase().includes('open') || x.toLowerCase().includes('closed')));
+            if (openStr) isOpenNow = openStr.toLowerCase().includes('open');
+          }
+          const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+          const hoursObj = {};
+          let lastDay = null;
+          flat.forEach(x => {
+            if (typeof x !== 'string') return;
+            const dayMatch = days.find(d => x.startsWith(d));
+            if (dayMatch) { lastDay = dayMatch; return; }
+            if (lastDay && /\d{1,2}:\d{2}/.test(x)) { hoursObj[lastDay] = x; lastDay = null; }
+          });
+          if (Object.keys(hoursObj).length > 0) openingHours = hoursObj;
+        }
+
+        let priceRange = null;
+        for (const idx of [4, 94]) {
+          if (priceRange) break;
+          if (Array.isArray(entry[idx])) {
+            const flat = safeFlat(entry[idx]);
+            const found = flat.find(x => typeof x === 'string' && /^[₹$€£]{1,4}$/.test(x.trim()));
+            if (found) priceRange = found.trim();
+          }
+        }
+
+        let plusCode = null;
+        for (const idx of [183, 58]) {
+          if (plusCode) break;
+          if (Array.isArray(entry[idx])) {
+            const flat = safeFlat(entry[idx]);
+            const found = flat.find(x => typeof x === 'string' && /^[A-Z0-9]{4}\+[A-Z0-9]{2}/.test(x));
+            if (found) plusCode = found;
+          }
+        }
+
+        let photoCount = null;
+        if (Array.isArray(entry[171])) photoCount = String(entry[171].flat(3).filter(Array.isArray).length);
+
+        let description = null;
+        for (const idx of [32, 99, 111]) {
+          if (description) break;
+          if (typeof entry[idx] === 'string' && entry[idx].length > 20) description = entry[idx];
+        }
+
+        let mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(name)}`;
+        if (placeId && placeId !== 'N/A') {
+          mapsUrl = `https://www.google.com/maps/place/?q=place_id:${placeId}`;
+        }
+
+        results.push({
+          placeId, name, category, phone, address, website, social, mapsUrl,
+          rating, reviewCount,                          // ← now populated
+          isOpenNow, openingHours, priceRange, plusCode,
+          photoCount, description,
+          hasMultipleBranches: false, branchCount: null, branchDetectSource: null,
+          query, scrapedDate: today(),
+          status: 'new', messageSent: false, replied: false, dealClosed: false,
+          isLead: website !== 'Not Found' ? false : true
+        });
+
+      } catch (e) {
+        deepSearch(entry, depth + 1);
+      }
+    });
+  }
+
+  deepSearch(json);
+  return results;
+}
+
+// ─── LOAD / SAVE LEADS ────────────────────────────────────────────────────────
+function loadLeads() {
+  if (fs.existsSync('../datasets/leads.json')) {
+    try { return JSON.parse(fs.readFileSync('../datasets/leads.json', 'utf8')); }
+    catch { return []; }
+  }
+  return [];
+}
+
+function saveLeads(leads) {
+  // Deduplicate by name (case-insensitive) + placeId as fallback
+  const seen = new Map();
+  const deduped = [];
+  for (const lead of leads) {
+    const key = lead.placeId && lead.placeId !== 'N/A'
+      ? lead.placeId
+      : lead.name.trim().toLowerCase();
+    if (!seen.has(key)) {
+      seen.set(key, true);
+      deduped.push(lead);
+    }
+  }
+  fs.writeFileSync('../datasets/leads.json', JSON.stringify(deduped, null, 2), 'utf8');
+  console.log(`💾 leads.json updated — ${deduped.length} total leads`);
+}
+
+// ─── SCROLL HELPER ────────────────────────────────────────────────────────────
+async function scrollAndWaitForMoreItems(page, itemCountBefore, timeout = 9000) {
+  await page.evaluate(() => {
+    const panel = document.querySelector('div[role="feed"]');
+    if (!panel) return;
+    const children = panel.querySelectorAll(':scope > div');
+    if (children.length) {
+      children[children.length - 1].scrollIntoView({ behavior: 'instant', block: 'end' });
+    }
+  });
+
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    await page.waitForTimeout(500);
+    const currentCount = await page.evaluate(() => {
+      const panel = document.querySelector('div[role="feed"]');
+      return panel ? panel.querySelectorAll(':scope > div').length : 0;
+    });
+    if (currentCount > itemCountBefore) return currentCount;
+    const ended = await page.evaluate(() => {
+      const end = document.querySelector('p.fontBodyMedium > span');
+      return end && end.textContent.includes("You've reached the end");
+    });
+    if (ended) return null;
+  }
+  return null;
+}
+
+// ─── SINGLE QUERY SCRAPER ─────────────────────────────────────────────────────
+async function scrapeQuery(page, searchQuery, scrollCount, seenKeys) {
+  console.log(`\n🚀 Searching: "${searchQuery}"`);
+
+  const newLeads = [];
+  let activeResponses = 0;
+
+  const onResponse = async (response) => {
+    const url = response.url();
+    const isTarget =
+      url.includes('search?tbm=map') ||
+      url.includes('/maps/search/') ||
+      url.includes('maps/api/js/PlacesService') ||
+      url.includes('preview/place') ||
+      (url.includes('maps') && url.includes('pb='));
+
+    if (!isTarget) return;
+
+    activeResponses++;
+    try {
+      const rawText = await response.text();
+      const json = parseMapResponse(rawText);
+      const found = extractBusinessesFromJSON(json, searchQuery);
+
+      found.forEach(b => {
+        // Deduplicate by placeId first, then by name
+        const key = b.placeId && b.placeId !== 'N/A'
+          ? b.placeId
+          : b.name.trim().toLowerCase();
+
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          newLeads.push(b);
+          console.log(`  ✅ [${newLeads.length}] ${b.name} | ⭐${b.rating} (${b.reviewCount ?? '?'} reviews) | 📞${b.phone}`);
+        }
+      });
+    } catch (e) { /* skip unparseable responses */ }
+    activeResponses--;
+  };
+
+  page.on('response', onResponse);
+
+  await page.goto(
+    `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`,
+    { waitUntil: 'domcontentloaded', timeout: 60000 }
+  );
+
+  await page.waitForSelector('div[role="feed"]', { timeout: 15000 })
+    .catch(() => console.log('⚠️ Feed not found, continuing...'));
+
+  await page.waitForTimeout(2000);
+
+  for (let i = 0; i < scrollCount; i++) {
+    const itemsBefore = await page.evaluate(() => {
+      const p = document.querySelector('div[role="feed"]');
+      return p ? p.querySelectorAll(':scope > div').length : 0;
+    });
+
+    if (!itemsBefore) {
+      console.log('⚠️ Feed panel gone, stopping.');
+      break;
+    }
+
+    const newCount = await scrollAndWaitForMoreItems(page, itemsBefore);
+
+    let waited = 0;
+    while (activeResponses > 0 && waited < 5000) {
+      await page.waitForTimeout(300);
+      waited += 300;
+    }
+
+    process.stdout.write(`\r📜 Scroll ${i + 1}/${scrollCount} — ${newLeads.length} leads found    \n`);
+
+    if (newCount === null) {
+      console.log(`  ⚠️ No new items after scroll ${i + 1} — stopping early`);
+      break;
+    }
+  }
+
+  await page.waitForTimeout(500);
+  page.off('response', onResponse);
+  console.log('');
+  return newLeads;
+}
+
+// ─── SCRAPE MULTIPLE ──────────────────────────────────────────────────────────
+async function scrapeMultiple(queries, scrollCount = 5) {
+  console.log(`\n🎯 Area-wise Gym Scraper — Surat`);
+  console.log(`📋 Total queries: ${queries.length}`);
+  console.log(`📜 Max scrolls per query: ${scrollCount}\n`);
+
+  const browser = await chromium.launch({ headless: false });
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+    locale: 'en-IN',
+    timezoneId: 'Asia/Kolkata'
+  });
+  const page = await context.newPage();
+
+  const existingLeads = loadLeads();
+
+  // Build seen keys from existing leads (placeId OR name)
+  const seenKeys = new Set(
+    existingLeads.map(l =>
+      l.placeId && l.placeId !== 'N/A' ? l.placeId : l.name.trim().toLowerCase()
+    )
+  );
+
+  let totalNew = 0;
+
+  for (let i = 0; i < queries.length; i++) {
+    console.log(`\n[${i + 1}/${queries.length}]`);
+    const newLeads = await scrapeQuery(page, queries[i], scrollCount, seenKeys);
+
+    if (newLeads.length > 0) {
+      const allLeads = loadLeads();
+      saveLeads([...allLeads, ...newLeads]);
+      totalNew += newLeads.length;
+      console.log(`✅ +${newLeads.length} new leads (${totalNew} total)\n`);
+    } else {
+      console.log('⚠️  No new leads found.\n');
+    }
+
+    if (i < queries.length - 1) {
+      console.log('⏳ Waiting 5s...');
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
+
+  await browser.close();
+
+  const leads = loadLeads();
+  console.log('\n═══════════════════════════════════════════');
+  console.log(`🎯 ALL DONE! Total: ${leads.length} gyms | New this run: ${totalNew}`);
+  console.log('═══════════════════════════════════════════\n');
+  console.table(leads.slice(0, 5).map(b => ({
+    Name: b.name, Area: b.query?.split('in ')[1]?.split(',')[0] || '',
+    Rating: b.rating, Reviews: b.reviewCount, Phone: b.phone
+  })));
+}
+
+// ─── RUN ──────────────────────────────────────────────────────────────────────
+const queries = [
+  // 'gym in Surat, Gujarat, India',
+  'gym in Adajan, Surat, Gujarat, India',
+  // 'gym in Pal, Surat, Gujarat, India',
+  // 'gym in Vesu, Surat, Gujarat, India',
+  // 'gym in Piplod, Surat, Gujarat, India',
+  // 'gym in Althan, Surat, Gujarat, India',
+  // 'gym in Athwa, Surat, Gujarat, India',
+  // 'gym in Rander, Surat, Gujarat, India',
+  // 'gym in Varachha, Surat, Gujarat, India',
+  // 'gym in Katargam, Surat, Gujarat, India',
+  // 'gym in Udhna, Surat, Gujarat, India',
+  // 'gym in Limbayat, Surat, Gujarat, India',
+  // 'gym in Bhatar, Surat, Gujarat, India',
+  // 'gym in Dindoli, Surat, Gujarat, India',
+  // 'gym in Pandesara, Surat, Gujarat, India',
+  // 'gym in Sachin, Surat, Gujarat, India',
+  // 'gym in Sarthana, Surat, Gujarat, India',
+  // 'gym in Kamrej, Surat, Gujarat, India',
+  // 'gym in Punagam, Surat, Gujarat, India',
+  // 'gym in VIP Road, Surat, Gujarat, India',
+  // 'gym in Citylight, Surat, Gujarat, India',
+  // 'gym in Ghod Dod Road, Surat, Gujarat, India',
+  // 'gym in Ring Road, Surat, Gujarat, India',
+  // 'gym in Amroli, Surat, Gujarat, India',
+  // 'gym in Puna, Surat, Gujarat, India',
+  // 'gym in Khatodara, Surat, Gujarat, India',
+  // 'gym in Singanpor, Surat, Gujarat, India',
+  // 'gym in Dumas, Surat, Gujarat, India',
+  // 'gym in Magdalla, Surat, Gujarat, India',
+  // 'gym in Hazira, Surat, Gujarat, India',
+  // 'gym in Ichchhapor, Surat, Gujarat, India',
+  // 'gym in Kosad, Surat, Gujarat, India',
+  // 'gym in Rundh, Surat, Gujarat, India',
+  // 'gym in Bardoli, Surat, Gujarat, India'
+];
+
+scrapeMultiple(queries, 0);

@@ -2,7 +2,7 @@ Hi {{name}}
 
 I’m Hetvi from Surat — I help businesses grow online.
 
-I was researching gyms in Surat and found yours. Your rating is really good ({{rating}})
+I was researching Fitness center in Surat and found yours. Your rating is really good ({{rating}})
 I noticed there’s no website yet.
 
 These days, many people check online before joining, and a simple website can help bring more inquiries.

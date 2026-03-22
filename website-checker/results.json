@@ -1,0 +1,842 @@
+[
+  {
+    "url": "http://www.redcrossgym.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "2743ms"
+  },
+  {
+    "url": "https://www.five-fitness.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "109ms"
+  },
+  {
+    "url": "https://cfs-gym.grexa.site/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1304ms"
+  },
+  {
+    "url": "http://gymlounge.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "240ms"
+  },
+  {
+    "url": "http://www.fitcare24.com/",
+    "status": "⚠️ WARNING",
+    "code": 403,
+    "responseTime": "383ms"
+  },
+  {
+    "url": "http://www.360fitness.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "4937ms"
+  },
+  {
+    "url": "https://fitnesstrend.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "2075ms"
+  },
+  {
+    "url": "https://stallon.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1144ms"
+  },
+  {
+    "url": "https://body-n-beauty-health.grexa.site/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1239ms"
+  },
+  {
+    "url": "https://kartikfitnessgym.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "54ms"
+  },
+  {
+    "url": "http://www.kpfitness.in/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "19ms"
+  },
+  {
+    "url": "http://kapadiaclubhotel.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "3670ms"
+  },
+  {
+    "url": "https://www.planetfitness.com/",
+    "status": "⚠️ WARNING",
+    "code": 403,
+    "responseTime": "154ms"
+  },
+  {
+    "url": "https://gymshine.co.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "121ms"
+  },
+  {
+    "url": "https://amphfit.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "5864ms"
+  },
+  {
+    "url": "https://www.eklavyagym.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "103ms"
+  },
+  {
+    "url": "http://www.omggimnasio.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "142ms"
+  },
+  {
+    "url": "https://myurls.co/fitoshe",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1145ms"
+  },
+  {
+    "url": "https://fggroup.in/fitnesswithgomzi/weight-loss-programs",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "267ms"
+  },
+  {
+    "url": "http://svhealthclub.com/subpage.aspx?id=1&pid=0",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "104ms"
+  },
+  {
+    "url": "http://slimiphy.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "201ms"
+  },
+  {
+    "url": "https://www.musclehousegymandfitness.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "131ms"
+  },
+  {
+    "url": "http://www.tanishphysioandfitness.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "304ms"
+  },
+  {
+    "url": "https://fggroup.in/fgiit/courses",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "386ms"
+  },
+  {
+    "url": "http://sportena.club/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "3500ms"
+  },
+  {
+    "url": "https://www.saritasagarsankul.org/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "218ms"
+  },
+  {
+    "url": "https://trevira-physiotherapy-clinic.ueniweb.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1242ms"
+  },
+  {
+    "url": "http://www.apri.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "3431ms"
+  },
+  {
+    "url": "https://thebunkerbootcamp.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "223ms"
+  },
+  {
+    "url": "https://www.fitmotivation.in/",
+    "status": "❌ DOWN",
+    "code": "ECONNABORTED",
+    "responseTime": "10016ms"
+  },
+  {
+    "url": "http://www.healingwithroshani.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "2158ms"
+  },
+  {
+    "url": "http://www.ruhstepup.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "5330ms"
+  },
+  {
+    "url": "https://the-metric-gym.grexa.site/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "502ms"
+  },
+  {
+    "url": "https://kratosclub.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "107ms"
+  },
+  {
+    "url": "https://preschool.littlemillennium.com/little-millennium/preschool-in-surat/preschool-in-Adajan/little-millennium-preschool-in-Adajan-surat--1UVtIO/home",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1767ms"
+  },
+  {
+    "url": "http://www.countryclubindia.net/",
+    "status": "❌ DOWN",
+    "code": "ERR_TLS_CERT_ALTNAME_INVALID",
+    "responseTime": "1011ms"
+  },
+  {
+    "url": "http://www.ashiharakarate.org/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "7776ms"
+  },
+  {
+    "url": "https://business.google.com/v/body-battle-fitness/...",
+    "status": "⚠️ WARNING",
+    "code": 404,
+    "responseTime": "629ms"
+  },
+  {
+    "url": "https://www.newlifesupplement.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "358ms"
+  },
+  {
+    "url": "https://www.fitnewfine.mydt.in/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "126ms"
+  },
+  {
+    "url": "http://www.thegreencoat.net/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "112ms"
+  },
+  {
+    "url": "https://www.cosmicyogawithhetvi.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "353ms"
+  },
+  {
+    "url": "https://www.afton.in/locations?store=58a57dfb0acb519f30b795d4",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "121ms"
+  },
+  {
+    "url": "https://ergoengineers.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "428ms"
+  },
+  {
+    "url": "https://www.yogkulam.com/franchise-VYAK",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "767ms"
+  },
+  {
+    "url": "https://gujkungfufederation.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "6132ms"
+  },
+  {
+    "url": "https://www.habitsbyjoel.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1448ms"
+  },
+  {
+    "url": "http://www.arrowfitnessindia.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "100ms"
+  },
+  {
+    "url": "http://www.cbphealth.club/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "688ms"
+  },
+  {
+    "url": "https://fitmotivation.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "562ms"
+  },
+  {
+    "url": "http://www.suratcitygymkhana.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "965ms"
+  },
+  {
+    "url": "http://www.thedivineshealth.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "312ms"
+  },
+  {
+    "url": "http://www.abhifit.in/",
+    "status": "⚠️ WARNING",
+    "code": 403,
+    "responseTime": "142ms"
+  },
+  {
+    "url": "https://blackbunny.co.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1084ms"
+  },
+  {
+    "url": "https://thunderbulll.com/contact-us/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "269ms"
+  },
+  {
+    "url": "http://ssiym.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "4511ms"
+  },
+  {
+    "url": "https://www.jeraifitness.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "380ms"
+  },
+  {
+    "url": "https://www.missionhealth.co.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "599ms"
+  },
+  {
+    "url": "http://sportsphysio.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "124ms"
+  },
+  {
+    "url": "https://boltnutritions.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "267ms"
+  },
+  {
+    "url": "https://sdca.co.in/amenities.php?institution=1",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "183ms"
+  },
+  {
+    "url": "https://sites.google.com/view/samsperformancecoaching/home",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "537ms"
+  },
+  {
+    "url": "http://www.smeerafitness.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "261ms"
+  },
+  {
+    "url": "http://ultimatehealthsolutions.webs.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "20ms"
+  },
+  {
+    "url": "https://socialaddress.ai/bungeefusion",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "524ms"
+  },
+  {
+    "url": "https://www.totalsf.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "825ms"
+  },
+  {
+    "url": "https://aatmanyog.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "251ms"
+  },
+  {
+    "url": "https://www.gymshine.co.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1369ms"
+  },
+  {
+    "url": "http://superprofile.bio/insyncyogaandpilates",
+    "status": "⚠️ WARNING",
+    "code": 429,
+    "responseTime": "181ms"
+  },
+  {
+    "url": "https://www.artofliving.org/in-en/centers/surat",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "399ms"
+  },
+  {
+    "url": "http://biofitacademy.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "793ms"
+  },
+  {
+    "url": "http://www.meetphysiotherapyclinics.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "393ms"
+  },
+  {
+    "url": "https://www.yogmitra.in/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "37ms"
+  },
+  {
+    "url": "https://wa.link/ve4xdh",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1176ms"
+  },
+  {
+    "url": "https://lakhoz.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "240ms"
+  },
+  {
+    "url": "http://reactivephysiohub.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "669ms"
+  },
+  {
+    "url": "https://nutritionistminaz.zest.md/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "178ms"
+  },
+  {
+    "url": "https://drsanyasyogshala.blogspot.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1017ms"
+  },
+  {
+    "url": "http://shreejiphysio.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "585ms"
+  },
+  {
+    "url": "https://physiojunction.nowfloats.com/",
+    "status": "❌ DOWN",
+    "code": "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+    "responseTime": "215ms"
+  },
+  {
+    "url": "http://athleverse.exlyapp.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "782ms"
+  },
+  {
+    "url": "http://www.cluboneiros.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "619ms"
+  },
+  {
+    "url": "https://radhewellness.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "236ms"
+  },
+  {
+    "url": "http://www.samyakyogp.blogspot.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "3654ms"
+  },
+  {
+    "url": "https://x10-fitness-gym.grexa.site/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "814ms"
+  },
+  {
+    "url": "http://www.italiyaimportexport.co.in/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "18ms"
+  },
+  {
+    "url": "https://youtube.com/@vlogvssuresh",
+    "status": "⚠️ WARNING",
+    "code": 404,
+    "responseTime": "337ms"
+  },
+  {
+    "url": "https://slimiphy.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "147ms"
+  },
+  {
+    "url": "http://www.stallon.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1336ms"
+  },
+  {
+    "url": "https://new-golds-gym-best-gym.grexa.site/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "823ms"
+  },
+  {
+    "url": "http://www.geloxyfitness.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "179ms"
+  },
+  {
+    "url": "http://www.slimiphy.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1895ms"
+  },
+  {
+    "url": "http://www.9salvogym.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "132ms"
+  },
+  {
+    "url": "https://www.yogiyogacenter.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "3646ms"
+  },
+  {
+    "url": "https://thefitnessindia.in/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "22ms"
+  },
+  {
+    "url": "http://kashthbhanjandevfitness.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "26ms"
+  },
+  {
+    "url": "https://www.metrofitness.co.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1115ms"
+  },
+  {
+    "url": "https://tcpgymin.blogspot.com/2024/11/gym-and-fitness-centre.html?m=1",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "719ms"
+  },
+  {
+    "url": "http://www.five-fitness.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1192ms"
+  },
+  {
+    "url": "http://trivid.graphy.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "446ms"
+  },
+  {
+    "url": "https://www.balancefitnessequipment.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1166ms"
+  },
+  {
+    "url": "https://linktr.ee/fitxcel_nutrition",
+    "status": "⚠️ WARNING",
+    "code": 406,
+    "responseTime": "1380ms"
+  },
+  {
+    "url": "http://www.pamirsdynamicwarriors.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "7358ms"
+  },
+  {
+    "url": "http://www.multiformsports.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "4199ms"
+  },
+  {
+    "url": "http://bit.ly/SHD_BusinessSite",
+    "status": "⚠️ WARNING",
+    "code": 404,
+    "responseTime": "627ms"
+  },
+  {
+    "url": "http://www.suratmunicipal.gov.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "211ms"
+  },
+  {
+    "url": "http://dolphyfitness.co.in/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "17ms"
+  },
+  {
+    "url": "https://www.reliancedigitalstores.in/...",
+    "status": "⚠️ WARNING",
+    "code": 403,
+    "responseTime": "89ms"
+  },
+  {
+    "url": "http://www.purefitnessmagazine.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "143ms"
+  },
+  {
+    "url": "http://www.heritagehospital.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "684ms"
+  },
+  {
+    "url": "https://stores.vijaysales.com/...",
+    "status": "⚠️ WARNING",
+    "code": 404,
+    "responseTime": "85ms"
+  },
+  {
+    "url": "https://www.suratmunicipal.gov.in/Zones/South/SouthZoneA",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "976ms"
+  },
+  {
+    "url": "http://leafaerobics.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "31ms"
+  },
+  {
+    "url": "https://youtube.com/shorts/auvShnLhbcQ?feature=share",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1578ms"
+  },
+  {
+    "url": "http://www.karateshotokan.co.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1977ms"
+  },
+  {
+    "url": "https://www.buyprotein.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "426ms"
+  },
+  {
+    "url": "http://wwwgymcity.com/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "150ms"
+  },
+  {
+    "url": "https://diliprajaramshahu.goherbalife.com/en-in",
+    "status": "❌ DOWN",
+    "code": "ECONNABORTED",
+    "responseTime": "10015ms"
+  },
+  {
+    "url": "http://www.irontemplegym.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1378ms"
+  },
+  {
+    "url": "https://sahyogfitness.com/",
+    "status": "⚠️ WARNING",
+    "code": 403,
+    "responseTime": "217ms"
+  },
+  {
+    "url": "https://erapilates.in/",
+    "status": "❌ DOWN",
+    "code": "ENOTFOUND",
+    "responseTime": "21ms"
+  },
+  {
+    "url": "http://fitness.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "2946ms"
+  },
+  {
+    "url": "https://tinw.in/taj-gym",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "685ms"
+  },
+  {
+    "url": "http://rockongroup.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "884ms"
+  },
+  {
+    "url": "https://mtfitcoach.goherbalife.com/en-in",
+    "status": "❌ DOWN",
+    "code": "ECONNABORTED",
+    "responseTime": "10004ms"
+  },
+  {
+    "url": "http://www.bodystormfitness.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "3658ms"
+  },
+  {
+    "url": "https://fitathome.netlify.app/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1191ms"
+  },
+  {
+    "url": "http://www.syndicategym.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "293ms"
+  },
+  {
+    "url": "https://play.google.com/store/apps/details?id=com.newshapefitnesshub.bellyfatchallenge",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "338ms"
+  },
+  {
+    "url": "https://yogatherealpathoflife.org/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "855ms"
+  },
+  {
+    "url": "https://www.fitnesstrend.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "4129ms"
+  },
+  {
+    "url": "https://www.powermaxfitness.net/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "383ms"
+  },
+  {
+    "url": "https://www.decathlon.in/store/surat",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "208ms"
+  },
+  {
+    "url": "http://www.khelghar.co.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "1987ms"
+  },
+  {
+    "url": "https://fggroup.in/fgiit/fitness-courses",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "580ms"
+  },
+  {
+    "url": "http://www.fitnesstrackgyms.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "7571ms"
+  },
+  {
+    "url": "https://s-fitness-gold.vercel.app/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "109ms"
+  },
+  {
+    "url": "https://www.visionfitness.in/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "172ms"
+  },
+  {
+    "url": "http://fitnesstrackgyms.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "277ms"
+  },
+  {
+    "url": "https://www.slimiphy.com/",
+    "status": "✅ WORKING",
+    "code": 200,
+    "responseTime": "420ms"
+  }
+]

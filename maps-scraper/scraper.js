@@ -1,6 +1,34 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 
+const EXACT_GYM_CATEGORIES = new Set([
+  'gym',
+  'fitness center',
+  'fitness club',
+  'health club',
+  'gymnasium',
+  'boxing gym',
+  'crossfit gym',
+]);
+
+function normalize(str) {
+  return (str || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isValidGym(name, category) {
+  const nameNorm = normalize(name);
+  const catNorm  = normalize(category);
+
+  if (EXACT_GYM_CATEGORIES.has(catNorm)) {
+    return true;
+  }
+  return false;
+}
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function today() {
   return new Date().toISOString().split('T')[0];
@@ -8,6 +36,39 @@ function today() {
 function safeFlat(arr, depth = 5) {
   try { return arr.flat(depth); } catch { return []; }
 }
+// ─── CLOSURE STATUS DETECTOR ──────────────────────────────────────────────────
+function getClosureStatus(entry) {
+  // Indices most likely to carry business_status / closure labels in Maps JSON
+  const checkIndices = [88, 34, 4, 203, 97, 100, 111, 32, 99];
+
+  for (const idx of checkIndices) {
+    if (entry[idx] == null) continue;
+
+    // Handle both array and plain string at the index
+    const items = Array.isArray(entry[idx])
+      ? safeFlat(entry[idx])
+      : [entry[idx]];
+
+    for (const item of items) {
+      if (typeof item !== 'string') continue;
+      const lower = item.toLowerCase();
+      if (lower.includes('permanently closed'))  return 'permanently_closed';
+      if (lower.includes('temporarily closed'))  return 'temporarily_closed';
+    }
+  }
+
+  // Fallback: scan the entire entry shallowly for closure strings
+  for (let i = 0; i < entry.length; i++) {
+    if (typeof entry[i] === 'string') {
+      const lower = entry[i].toLowerCase();
+      if (lower.includes('permanently closed'))  return 'permanently_closed';
+      if (lower.includes('temporarily closed'))  return 'temporarily_closed';
+    }
+  }
+
+  return null; // Business is operational (or status unknown → keep it)
+}
+
 
 // ─── RESPONSE PARSER ──────────────────────────────────────────────────────────
 function parseMapResponse(rawText) {
@@ -33,62 +94,6 @@ function parseMapResponse(rawText) {
   return JSON.parse(text);
 }
 
-// ─── REVIEW COUNT EXTRACTOR ───────────────────────────────────────────────────
-// Google Maps stores review count in several possible locations.
-// This helper checks all known indices and also does a deep numeric search
-// near the rating value so we never miss it.
-function extractReviewCount(entry, rating) {
-  // ── 1. Most common: entry[4][8] ──
-  if (Array.isArray(entry[4])) {
-    // entry[4][8] — standard
-    if (entry[4][8] != null && typeof entry[4][8] === 'number' && entry[4][8] > 0)
-      return String(entry[4][8]);
-
-    // Sometimes it sits at entry[4][9]
-    if (entry[4][9] != null && typeof entry[4][9] === 'number' && entry[4][9] > 0)
-      return String(entry[4][9]);
-
-    // Flat search inside entry[4] for a large integer near the rating
-    const flat4 = safeFlat(entry[4]);
-    for (const val of flat4) {
-      if (typeof val === 'number' && Number.isInteger(val) && val >= 1 && val <= 999999) {
-        // Make sure it's not the rating itself (ratings are floats like 4.4)
-        if (val !== parseFloat(rating)) return String(val);
-      }
-    }
-  }
-
-  // ── 2. Alternate indices known to carry review data ──
-  for (const idx of [49, 51, 52, 175, 176]) {
-    if (entry[idx] == null) continue;
-    if (typeof entry[idx] === 'number' && Number.isInteger(entry[idx]) && entry[idx] > 0)
-      return String(entry[idx]);
-    if (Array.isArray(entry[idx])) {
-      const flat = safeFlat(entry[idx]);
-      const found = flat.find(x =>
-        typeof x === 'number' && Number.isInteger(x) && x >= 1 && x <= 999999
-      );
-      if (found != null) return String(found);
-    }
-  }
-
-  // ── 3. Last resort: scan the full entry for a number that looks like a review count ──
-  // We look for integers > 4 (to skip star ratings) that appear right after the rating float.
-  const fullFlat = safeFlat(entry);
-  for (let i = 0; i < fullFlat.length; i++) {
-    if (fullFlat[i] === parseFloat(rating)) {
-      // Check the next few values for a plausible review count
-      for (let j = i + 1; j < Math.min(i + 6, fullFlat.length); j++) {
-        const v = fullFlat[j];
-        if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 999999)
-          return String(v);
-      }
-    }
-  }
-
-  return null;
-}
-
 // ─── BUSINESS EXTRACTOR ───────────────────────────────────────────────────────
 function extractBusinessesFromJSON(json, query) {
   const results = [];
@@ -104,6 +109,29 @@ function extractBusinessesFromJSON(json, query) {
         if (!name) { deepSearch(entry, depth + 1); return; }
         if (name.startsWith('gcid:') || name.length < 3) { deepSearch(entry, depth + 1); return; }
 
+        let category = 'N/A';
+        if (Array.isArray(entry[13]) && typeof entry[13][0] === 'string') category = entry[13][0];
+
+        // ─── STRICT FILTER: skip anything that isn't a real gym ───────────────
+        if (!isValidGym(name, category)) {
+          console.log(`  ⛔ Skipped (not a gym): "${name}" [${category}]`);
+          return;
+        }
+
+        // ─── STRICT FILTER: skip anything that isn't a real gym ───────────────
+        if (!isValidGym(name, category)) {
+          console.log(`  ⛔ Skipped (not a gym): "${name}" [${category}]`);
+          return;
+        }
+
+        // ─── NEW: skip permanently / temporarily closed businesses ────────────
+        const closureStatus = getClosureStatus(entry);
+        if (closureStatus) {
+          console.log(`  🚫 Skipped (${closureStatus.replace(/_/g, ' ')}): "${name}"`);
+          return;
+        }
+
+
         let placeId = 'N/A';
         if (typeof entry[78] === 'string') placeId = entry[78];
         else if (typeof entry[10] === 'string' && entry[10].includes('0x')) placeId = entry[10];
@@ -111,8 +139,8 @@ function extractBusinessesFromJSON(json, query) {
         let rating = null;
         if (Array.isArray(entry[4]) && entry[4][7] != null) rating = String(entry[4][7]);
 
-        // ── FIXED: use dedicated extractor ──
-        const reviewCount = extractReviewCount(entry, rating);
+        let reviewCount = null;
+        if (Array.isArray(entry[4]) && entry[4][8] != null) reviewCount = String(entry[4][8]);
 
         let address = 'N/A';
         if (typeof entry[18] === 'string' && entry[18].length > 5) {
@@ -121,9 +149,6 @@ function extractBusinessesFromJSON(json, query) {
         } else if (Array.isArray(entry[2])) {
           address = entry[2].filter(x => typeof x === 'string').join(', ');
         }
-
-        let category = 'N/A';
-        if (Array.isArray(entry[13]) && typeof entry[13][0] === 'string') category = entry[13][0];
 
         let phone = 'Not Found';
         for (const idx of [178, 183, 182, 16, 35]) {
@@ -222,13 +247,13 @@ function extractBusinessesFromJSON(json, query) {
 
         results.push({
           placeId, name, category, phone, address, website, social, mapsUrl,
-          rating, reviewCount,                          // ← now populated
-          isOpenNow, openingHours, priceRange, plusCode,
+          rating, reviewCount, isOpenNow, openingHours, priceRange, plusCode,
           photoCount, description,
           hasMultipleBranches: false, branchCount: null, branchDetectSource: null,
           query, scrapedDate: today(),
           status: 'new', messageSent: false, replied: false, dealClosed: false,
-          isLead: website !== 'Not Found' ? false : true
+          isLead: website !== 'Not Found' ? false : true,
+          closureStatus: null,
         });
 
       } catch (e) {
@@ -296,11 +321,48 @@ async function scrollAndWaitForMoreItems(page, itemCountBefore, timeout = 9000) 
 }
 
 // ─── SINGLE QUERY SCRAPER ─────────────────────────────────────────────────────
-async function scrapeQuery(page, searchQuery, scrollCount, seenKeys) {
+async function scrapeQuery(page, searchQuery, scrollCount, seenNames) {
   console.log(`\n🚀 Searching: "${searchQuery}"`);
 
-  const newLeads = [];
-  let activeResponses = 0;
+  const newLeads       = [];
+  let   activeResponses = 0;
+  const closedNamesDOM = new Set(); // ← tracks DOM-detected closed businesses
+
+  // ─── DOM SCANNER: reads the visible feed for closed labels ────────────────
+  async function scanDOMForClosedBusinesses() {
+    const names = await page.evaluate(() => {
+      const closed = [];
+      document.querySelectorAll('div[role="feed"] > div').forEach(item => {
+        const txt = item.textContent || '';
+        const isClosed =
+          txt.includes('Temporarily closed') ||
+          txt.includes('Permanently closed');
+        if (!isClosed) return;
+
+        // Try every reasonable selector to extract the business name
+        const candidates = [
+          item.querySelector('a[aria-label]')?.getAttribute('aria-label'),
+          item.querySelector('[aria-label]')?.getAttribute('aria-label'),
+          item.querySelector('h3')?.textContent,
+          item.querySelector('[role="heading"]')?.textContent,
+        ];
+        for (const c of candidates) {
+          if (!c) continue;
+          const name = c.split('\n')[0].trim();
+          if (name.length > 2) { closed.push(name); break; }
+        }
+      });
+      return closed;
+    }).catch(() => []);
+
+    names.forEach(n => {
+      if (!closedNamesDOM.has(n)) {
+        console.log(`  🚫 DOM-closed detected: "${n}"`);
+        closedNamesDOM.add(n);
+      }
+    });
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   const onResponse = async (response) => {
     const url = response.url();
@@ -316,22 +378,22 @@ async function scrapeQuery(page, searchQuery, scrollCount, seenKeys) {
     activeResponses++;
     try {
       const rawText = await response.text();
-      const json = parseMapResponse(rawText);
-      const found = extractBusinessesFromJSON(json, searchQuery);
+      const json    = parseMapResponse(rawText);
+      const found   = extractBusinessesFromJSON(json, searchQuery);
 
       found.forEach(b => {
-        // Deduplicate by placeId first, then by name
-        const key = b.placeId && b.placeId !== 'N/A'
-          ? b.placeId
-          : b.name.trim().toLowerCase();
-
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
+        // ← check DOM-closed set first
+        if (closedNamesDOM.has(b.name)) {
+          console.log(`  🚫 Skipped (DOM-closed): "${b.name}"`);
+          return;
+        }
+        if (!seenNames.has(b.name)) {
+          seenNames.add(b.name);
           newLeads.push(b);
-          console.log(`  ✅ [${newLeads.length}] ${b.name} | ⭐${b.rating} (${b.reviewCount ?? '?'} reviews) | 📞${b.phone}`);
+          console.log(`  ✅ [${newLeads.length}] ${b.name} | [${b.category}] | ⭐${b.rating} | 📞${b.phone}`);
         }
       });
-    } catch (e) { /* skip unparseable responses */ }
+    } catch (e) { /* skip unparseable */ }
     activeResponses--;
   };
 
@@ -346,6 +408,7 @@ async function scrapeQuery(page, searchQuery, scrollCount, seenKeys) {
     .catch(() => console.log('⚠️ Feed not found, continuing...'));
 
   await page.waitForTimeout(2000);
+  await scanDOMForClosedBusinesses(); // ← initial scan before scrolling
 
   for (let i = 0; i < scrollCount; i++) {
     const itemsBefore = await page.evaluate(() => {
@@ -366,6 +429,8 @@ async function scrapeQuery(page, searchQuery, scrollCount, seenKeys) {
       waited += 300;
     }
 
+    await scanDOMForClosedBusinesses(); // ← scan after EVERY scroll
+
     process.stdout.write(`\r📜 Scroll ${i + 1}/${scrollCount} — ${newLeads.length} leads found    \n`);
 
     if (newCount === null) {
@@ -376,15 +441,27 @@ async function scrapeQuery(page, searchQuery, scrollCount, seenKeys) {
 
   await page.waitForTimeout(500);
   page.off('response', onResponse);
+
+  // ─── FINAL SAFETY PASS: purge any closed leads that slipped in before DOM scan
+  const finalLeads = newLeads.filter(b => {
+    if (closedNamesDOM.has(b.name)) {
+      console.log(`  🧹 Post-filter removed (closed): "${b.name}"`);
+      return false;
+    }
+    return true;
+  });
+
   console.log('');
-  return newLeads;
+  return finalLeads;
 }
+
 
 // ─── SCRAPE MULTIPLE ──────────────────────────────────────────────────────────
 async function scrapeMultiple(queries, scrollCount = 5) {
   console.log(`\n🎯 Area-wise Gym Scraper — Surat`);
   console.log(`📋 Total queries: ${queries.length}`);
-  console.log(`📜 Max scrolls per query: ${scrollCount}\n`);
+  console.log(`📜 Max scrolls per query: ${scrollCount}`);
+  console.log(`🔒 Strict category filter: ON\n`);
 
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext({
@@ -395,19 +472,12 @@ async function scrapeMultiple(queries, scrollCount = 5) {
   const page = await context.newPage();
 
   const existingLeads = loadLeads();
-
-  // Build seen keys from existing leads (placeId OR name)
-  const seenKeys = new Set(
-    existingLeads.map(l =>
-      l.placeId && l.placeId !== 'N/A' ? l.placeId : l.name.trim().toLowerCase()
-    )
-  );
-
+  const seenNames = new Set(existingLeads.map(l => l.name));
   let totalNew = 0;
 
   for (let i = 0; i < queries.length; i++) {
     console.log(`\n[${i + 1}/${queries.length}]`);
-    const newLeads = await scrapeQuery(page, queries[i], scrollCount, seenKeys);
+    const newLeads = await scrapeQuery(page, queries[i], scrollCount, seenNames);
 
     if (newLeads.length > 0) {
       const allLeads = loadLeads();
@@ -431,47 +501,48 @@ async function scrapeMultiple(queries, scrollCount = 5) {
   console.log(`🎯 ALL DONE! Total: ${leads.length} gyms | New this run: ${totalNew}`);
   console.log('═══════════════════════════════════════════\n');
   console.table(leads.slice(0, 5).map(b => ({
-    Name: b.name, Area: b.query?.split('in ')[1]?.split(',')[0] || '',
-    Rating: b.rating, Reviews: b.reviewCount, Phone: b.phone
+    Name: b.name, Category: b.category,
+    Area: b.query?.split('in ')[1]?.split(',')[0] || '',
+    Rating: b.rating, Phone: b.phone
   })));
 }
 
 // ─── RUN ──────────────────────────────────────────────────────────────────────
 const queries = [
-  // 'gym in Surat, Gujarat, India',
+  'gym in Surat, Gujarat, India',
   'gym in Adajan, Surat, Gujarat, India',
-  // 'gym in Pal, Surat, Gujarat, India',
-  // 'gym in Vesu, Surat, Gujarat, India',
-  // 'gym in Piplod, Surat, Gujarat, India',
-  // 'gym in Althan, Surat, Gujarat, India',
-  // 'gym in Athwa, Surat, Gujarat, India',
-  // 'gym in Rander, Surat, Gujarat, India',
-  // 'gym in Varachha, Surat, Gujarat, India',
-  // 'gym in Katargam, Surat, Gujarat, India',
-  // 'gym in Udhna, Surat, Gujarat, India',
-  // 'gym in Limbayat, Surat, Gujarat, India',
-  // 'gym in Bhatar, Surat, Gujarat, India',
-  // 'gym in Dindoli, Surat, Gujarat, India',
-  // 'gym in Pandesara, Surat, Gujarat, India',
-  // 'gym in Sachin, Surat, Gujarat, India',
-  // 'gym in Sarthana, Surat, Gujarat, India',
-  // 'gym in Kamrej, Surat, Gujarat, India',
-  // 'gym in Punagam, Surat, Gujarat, India',
-  // 'gym in VIP Road, Surat, Gujarat, India',
-  // 'gym in Citylight, Surat, Gujarat, India',
-  // 'gym in Ghod Dod Road, Surat, Gujarat, India',
-  // 'gym in Ring Road, Surat, Gujarat, India',
-  // 'gym in Amroli, Surat, Gujarat, India',
-  // 'gym in Puna, Surat, Gujarat, India',
-  // 'gym in Khatodara, Surat, Gujarat, India',
-  // 'gym in Singanpor, Surat, Gujarat, India',
-  // 'gym in Dumas, Surat, Gujarat, India',
-  // 'gym in Magdalla, Surat, Gujarat, India',
-  // 'gym in Hazira, Surat, Gujarat, India',
-  // 'gym in Ichchhapor, Surat, Gujarat, India',
-  // 'gym in Kosad, Surat, Gujarat, India',
-  // 'gym in Rundh, Surat, Gujarat, India',
-  // 'gym in Bardoli, Surat, Gujarat, India'
+  'gym in Pal, Surat, Gujarat, India',
+  'gym in Vesu, Surat, Gujarat, India',
+  'gym in Piplod, Surat, Gujarat, India',
+  'gym in Althan, Surat, Gujarat, India',
+  'gym in Athwa, Surat, Gujarat, India',
+  'gym in Rander, Surat, Gujarat, India',
+  'gym in Varachha, Surat, Gujarat, India',
+  'gym in Katargam, Surat, Gujarat, India',
+  'gym in Udhna, Surat, Gujarat, India',
+  'gym in Limbayat, Surat, Gujarat, India',
+  'gym in Bhatar, Surat, Gujarat, India',
+  'gym in Dindoli, Surat, Gujarat, India',
+  'gym in Pandesara, Surat, Gujarat, India',
+  'gym in Sachin, Surat, Gujarat, India',
+  'gym in Sarthana, Surat, Gujarat, India',
+  'gym in Kamrej, Surat, Gujarat, India',
+  'gym in Punagam, Surat, Gujarat, India',
+  'gym in VIP Road, Surat, Gujarat, India',
+  'gym in Citylight, Surat, Gujarat, India',
+  'gym in Ghod Dod Road, Surat, Gujarat, India',
+  'gym in Ring Road, Surat, Gujarat, India',
+  'gym in Amroli, Surat, Gujarat, India',
+  'gym in Puna, Surat, Gujarat, India',
+  'gym in Khatodara, Surat, Gujarat, India',
+  'gym in Singanpor, Surat, Gujarat, India',
+  'gym in Dumas, Surat, Gujarat, India',
+  'gym in Magdalla, Surat, Gujarat, India',
+  'gym in Hazira, Surat, Gujarat, India',
+  'gym in Ichchhapor, Surat, Gujarat, India',
+  'gym in Kosad, Surat, Gujarat, India',
+  'gym in Rundh, Surat, Gujarat, India',
+  'gym in Bardoli, Surat, Gujarat, India'
 ];
 
-scrapeMultiple(queries, 0);
+scrapeMultiple(queries, 30);
